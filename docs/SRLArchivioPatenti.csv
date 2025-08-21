@@ -1,0 +1,134 @@
+
+
+<html>
+    <head>
+    </head>
+    <body>
+        <table border="1">
+            <tbody>
+                
+                    <tr	>             <!--STAMPA I NOMI DELLE COLONNE -->
+                        
+                            <td><b>SEDE</b>   </td>
+                        
+                            <td><b>TIPO_PATENTE</b>   </td>
+                        
+                            <td><b>CATEGORIA</b>   </td>
+                        
+                            <td><b>NUMERO_PATENTE</b>   </td>
+                        
+                            <td><b>NUMERO_CARD</b>   </td>
+                        
+                            <td><b>COGNOME</b>   </td>
+                        
+                            <td><b>NOME</b>   </td>
+                        
+                            <td><b>DATA_RILASCIO</b>   </td>
+                        
+                            <td><b>DATA_SCADENZA</b>   </td>
+                        
+                            <td><b>STATO</b>   </td>
+                        
+                    </tr>
+                
+                
+                    <tr> <!--STAMPA I DATI  -->
+                        
+                            <td>Direzione Regionale VV.F. Marche </td>
+                        
+                            <td>T </td>
+                        
+                            <td>TERZA CATEGORIA </td>
+                        
+                            <td>56379 </td>
+                        
+                            <td> </td>
+                        
+                            <td>CAPPELLACCI </td>
+                        
+                            <td>VANNI </td>
+                        
+                            <td> </td>
+                        
+                            <td>17/02/2020 </td>
+                        
+                            <td>DUPLICATO RIFIUTATO </td>
+                        
+                    </tr>
+                
+                    <tr> <!--STAMPA I DATI  -->
+                        
+                            <td>Direzione Regionale VV.F. Marche </td>
+                        
+                            <td>T </td>
+                        
+                            <td>PRIMA CATEGORIA </td>
+                        
+                            <td>63159 </td>
+                        
+                            <td>62960 </td>
+                        
+                            <td>AMBROGGIO </td>
+                        
+                            <td>DORISTELLA DEBORAH </td>
+                        
+                            <td>29/09/2023 </td>
+                        
+                            <td>19/01/2025 </td>
+                        
+                            <td>PATENTE EMESSA </td>
+                        
+                    </tr>
+                
+                    <tr> <!--STAMPA I DATI  -->
+                        
+                            <td>Direzione Regionale VV.F. Marche </td>
+                        
+                            <td>T </td>
+                        
+                            <td>PRIMA CATEGORIA </td>
+                        
+                            <td>13041 </td>
+                        
+                            <td>08736 </td>
+                        
+                            <td>BARISANO </td>
+                        
+                            <td>EUGENIO MICHELANGELO </td>
+                        
+                            <td>28/10/2011 </td>
+                        
+                            <td>26/05/2021 </td>
+                        
+                            <td>PATENTE EMESSA </td>
+                        
+                    </tr>
+                
+                    <tr> <!--STAMPA I DATI  -->
+                        
+                            <td>Direzione Regionale VV.F. Marche </td>
+                        
+                            <td>T </td>
+                        
+                            <td>SECONDA CATEGORIA </td>
+                        
+                            <td>54759 </td>
+                        
+                            <td>53098 </td>
+                        
+                            <td>LA MALFA </td>
+                        
+                            <td>ANTONIO </td>
+                        
+                            <td>07/02/2019 </td>
+                        
+                            <td>24/05/2023 </td>
+                        
+                            <td>PATENTE EMESSA </td>
+                        
+                    </tr>
+                
+            </tbody>
+        </table>
+    </body>
+</html>
