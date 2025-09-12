@@ -3,14 +3,19 @@
     // See https://aka.ms/new-console-template for more information
 
     using System;
+    using System.Diagnostics;
     using System.Net;
-    using System.Net.Mail;
 
     using avviso_scadenza_patenti.AppSettings;
     using avviso_scadenza_patenti.Controllers;
     using avviso_scadenza_patenti.Entities;
 
+    using MailKit.Net.Smtp;
+    using MailKit.Security;
+
     using Microsoft.Extensions.Configuration;
+
+    using MimeKit;
 
     using Serilog;
 
@@ -23,7 +28,6 @@
             var configuration = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json")
-                    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
                     .Build();
 
             settings = configuration.GetSection("Settings").Get<Settings>();
@@ -58,9 +62,9 @@
                 // Patente scaduta
                 Log.Debug($"Licenze expired for {employee.LastName} {employee.FirstName}: {expirationTime.Days}.");
 
-                if (expirationTime.Days % 7 == 1)
+                if (expirationTime.Days % 14 == -1 || expirationTime.Days > -3)
                 {
-                    WriteMail(employee, license);
+                    SendMail(employee, license);
                     Log.Information($"Send mail to {employee.Mail} for expired license. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
                 }
             }
@@ -75,7 +79,7 @@
                         if (!employee.Warning1Day)
                         {
                             employee.Warning1Day = true;
-                            WriteMail(employee, license);
+                            SendMail(employee, license);
                             EmployeeController.Save();
                             Log.Information($"Send mail to {employee.Mail} for expiration in 'One days'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
                         }
@@ -84,7 +88,7 @@
                         if (!employee.Warning1Week)
                         {
                             employee.Warning1Week = true;
-                            WriteMail(employee, license);
+                            SendMail(employee, license);
                             EmployeeController.Save();
                             Log.Information($"Send mail to {employee.Mail} for expiration in 'One Week'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
                         }
@@ -93,7 +97,7 @@
                         if (!employee.Warning2Weeks)
                         {
                             employee.Warning2Weeks = true;
-                            WriteMail(employee, license);
+                            SendMail(employee, license);
                             EmployeeController.Save();
                             Log.Information($"Send mail to {employee.Mail} for expiration in 'Two Weeks'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
                         }
@@ -102,7 +106,7 @@
                         if (!employee.Warning1Month)
                         {
                             employee.Warning1Month = true;
-                            WriteMail(employee, license);
+                            SendMail(employee, license);
                             EmployeeController.Save();
                             Log.Information($"Send mail to {employee.Mail} for expiration in 'One Month'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
                         }
@@ -111,44 +115,54 @@
                         if (!employee.Warning2Months)
                         {
                             employee.Warning2Months = true;
-                            WriteMail(employee, license);
+                            SendMail(employee, license);
                             EmployeeController.Save();
                             Log.Information($"Send mail to {employee.Mail} for expiration in 'Two Months'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
                         }
                         break;
+                    default:
+                        employee.Warning1Day = false;
+                        employee.Warning1Week = false;
+                        employee.Warning2Weeks = false;
+                        employee.Warning1Month = false;
+                        employee.Warning2Months = false;
+                        EmployeeController.Save();
+                        Log.Information($"Reset all warning flags");
+                        break;
                 }
             }
         }
-        private static void SendMail(Employee employee, DateTime expirationDate)
+        private static void SendMail(Employee employee, License license)
         {
             try
             {
-                // add from, to mailaddresses
-                MailAddress from = new MailAddress("noreply@vigilfuoco.it");
-                MailAddress to = new MailAddress("roberto.corradetti@vigilfuoco.it");
-                MailMessage licenseMail = new MailMessage(from, to);
+                using (var client = new SmtpClient())
+                {
+                    // Connect to SMTP server with SSL
+                    client.Connect(settings.MailServer.Host, 465, SecureSocketOptions.SslOnConnect);
 
-                // set subject and encoding
-                licenseMail.Subject = "Avviso scadenza Patente Ministeriale Terrestre";
-                licenseMail.SubjectEncoding = System.Text.Encoding.UTF8;
+                    // Authenticate with your SMTP credentials
+                    client.Authenticate(settings.MailServer.Username, settings.MailServer.Password);
 
-                // set body-message and encoding
-                licenseMail.Body = "<b>Test Mail</b><br>using <b>HTML</b>.";
-                licenseMail.BodyEncoding = System.Text.Encoding.UTF8;
+                    // Create warning message
+                    var message = new MimeMessage();
+                    message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
+#if DEBUG
+                    message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", "roberto.corradetti@vigilfuoco.it"));
+#else
+                    message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
+                    foreach (string mailBcc in settings.MailBcc)
+                    {
+                        message.Bcc.Add(new MailboxAddress(mailBcc, mailBcc));
+                    }
+#endif
+                    message.Subject = "Procedura Patenti WEB - Avviso scadenza patente";
+                    message.Body = MailHtmlBody(employee, license);
 
-                // text or html
-                licenseMail.IsBodyHtml = true;
+                    client.Send(message);
+                    client.Disconnect(true);
+                }
 
-                // Send email
-                SmtpClient smtpClient = new SmtpClient("smtp.vigilfuoco.it", 465);
-                smtpClient.EnableSsl = true;
-                smtpClient.Timeout = 20000;
-                smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
-                smtpClient.UseDefaultCredentials = false;
-                smtpClient.Credentials = new NetworkCredential("roberto.corradetti@vigilfuoco.it", "Corra+1070");
-                smtpClient.Send(licenseMail);
-
-                smtpClient.Dispose();
                 Log.Information($"Successfully send message to: {employee.Mail}");
             }
             catch (Exception ex)
@@ -157,47 +171,29 @@
             }
         }
 
-        private static void WriteMail(Employee employee, License license)
+        private static MimeEntity MailHtmlBody(Employee employee, License license)
         {
-            string mailFilename = $"{settings.MailOutputFolder}\\{license.LicenseNumber}.cmd";
-            using (var sw = new StreamWriter(mailFilename, false))
-            {
-                sw.Write(@"C:\Utilities\Cmail.exe");
-                sw.Write($" -host:{settings.MailServer.Username}:{settings.MailServer.Password}@{settings.MailServer.Host} -secureport");
-                sw.Write(" -authtypes:PLAIN");
-                sw.Write(" -from:noreply@vigilfuoco.it:\"Procedura Patenti WEB\"");
-                sw.Write($" -to:{employee.Mail}:\"{employee.LastName} {employee.FirstName}\"");
-                foreach (string mailBcc in settings.MailBcc)
-                {
-                    sw.Write($" -bcc:{mailBcc}");
-                }
-                sw.Write($" \"-subject:Procedura Patenti WEB - Avviso scadenza patente\"");
-                sw.Write($" -body-html:{license.LicenseNumber}.txt");
-            }
-            MailHtmlBody(employee, license);
-        }
+            var builder = new BodyBuilder();
 
-        private static void MailHtmlBody(Employee employee, License license)
-        {
-            string mailFilename = $"{settings.MailOutputFolder}\\{license.LicenseNumber}.txt";
-            using (var sw = new StreamWriter(mailFilename, false))
+            builder.HtmlBody = $"Buongiorno {employee.FirstName} {employee.LastName}<br/>";
+            builder.HtmlBody += $"<br/>";
+            if (DateTime.Now > license.ExpirationDate)
             {
-                sw.WriteLine($"Buongiorno {employee.FirstName} {employee.LastName}<br/>");
-                sw.WriteLine($"<br/>");
-                if (DateTime.Now > license.ExpirationDate)
-                {
-                    sw.WriteLine($"La tua patente è <b>SCADUTA</b><br/>");
-                }
-                else
-                {
-                    sw.WriteLine($"La tua patente di <b>{license.Category}</b> scadrà il/l' <b>{license.ExpirationDate:d}</b>.<br/>");
-                }
-                sw.WriteLine($"<br/>");
-                sw.WriteLine($"Se hai già provvuduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.");
-                sw.WriteLine($"<br/>");
-                sw.WriteLine($"<br/>");
-                sw.WriteLine($"<small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small>");
+                builder.HtmlBody += $"La tua patente è <b>SCADUTA</b><br/>";
+                Log.Debug($"License expired: {license.ExpirationDate:d}");
             }
+            else
+            {
+                builder.HtmlBody += $"La tua patente di <b>{license.Category}</b> scadrà il/l' <b>{license.ExpirationDate:d}</b>.<br/>";
+                Log.Debug($"License expiring on {license.ExpirationDate:d}");
+            }
+            builder.HtmlBody += $"<br/>";
+            builder.HtmlBody += $"Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.";
+            builder.HtmlBody += $"<br/>";
+            builder.HtmlBody += $"<br/>";
+            builder.HtmlBody += $"<small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small>";
+
+            return builder.ToMessageBody();
         }
     }
 }
