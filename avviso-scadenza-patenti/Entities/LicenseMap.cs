@@ -26,5 +26,5 @@
                 .TypeConverterOption.CultureInfo(cultureInfo);
             this.Map(m => m.Status).Name("STATO");
         }
-}
+    }
 }

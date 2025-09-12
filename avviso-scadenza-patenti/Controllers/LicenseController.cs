@@ -7,7 +7,6 @@
     using avviso_scadenza_patenti.Entities;
 
     using CsvHelper;
-    using CsvHelper.Configuration;
 
     using Serilog;
 
@@ -39,7 +38,6 @@
 
         public static IList<License> List()
         {
-            //return (from p in licenses select p).ToList();
             return licenses.ToList();
         }
     }

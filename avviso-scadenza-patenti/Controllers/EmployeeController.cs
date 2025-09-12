@@ -4,6 +4,7 @@
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     using avviso_scadenza_patenti.Entities;
 
@@ -51,8 +52,16 @@
             {
                 LastName = lastName,
                 FirstName = firstName,
-                Mail = $"{firstName}.{lastName}@vigilfuoco.it".ToLower()
+                Mail = Regex.Replace($"{firstName}.{lastName}@vigilfuoco.it".ToLower(), @"\s+", "")
             };
+
+            // Controlla l'esistenza di una mail non conforme allo standard nome.cognome@vigilfuoco.it
+            UncompliantMail uncompliantMail = UncompliantMailController.Get(lastName, firstName);
+            if (uncompliantMail != null)
+            {
+                employee.Mail = uncompliantMail.Mail;
+            }
+
             employees.Add(employee);
             Save();
 
@@ -63,7 +72,7 @@
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
                 csv.Context.RegisterClassMap<EmployeeMap>();
-                csv.WriteRecords(employees);
+                csv.WriteRecords(employees.OrderBy(e => e.LastName).ThenBy(e => e.FirstName));
             }
         }
     }
