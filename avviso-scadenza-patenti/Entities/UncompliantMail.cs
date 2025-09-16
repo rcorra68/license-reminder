@@ -2,8 +2,8 @@
 {
     public class UncompliantMail
     {
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Mail { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Mail { get; set; }
     }
 }

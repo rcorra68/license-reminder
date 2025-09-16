@@ -15,7 +15,7 @@
     internal class EmployeeController
     {
         protected static IList<Employee> employees;
-        private static readonly string csvFilename = @".\Employees.csv";
+        private static readonly string csvFilename = $"{AppDomain.CurrentDomain.BaseDirectory}Employees.csv";
 
         static EmployeeController()
         {

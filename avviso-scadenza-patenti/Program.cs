@@ -27,7 +27,7 @@
         {
             var configuration = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json")
+                    .AddJsonFile($"{AppDomain.CurrentDomain.BaseDirectory}appsettings.json")
                     .Build();
 
             settings = configuration.GetSection("Settings").Get<Settings>();
@@ -45,7 +45,7 @@
                 if (employee == null)
                 {
                     employee = EmployeeController.Create(license.LastName, license.FirstName);
-                    Log.Information("Create new Employee: {0} {1} - {2}", employee.LastName, employee.FirstName, employee.Mail);
+                    Log.Information($"Create new Employee: {0} {1} - {2}", employee.LastName, employee.FirstName, employee.Mail);
                 }
 
                 // Verifica la scadenza della patente
@@ -127,7 +127,7 @@
                         employee.Warning1Month = false;
                         employee.Warning2Months = false;
                         EmployeeController.Save();
-                        Log.Information($"Reset all warning flags");
+                        Log.Debug($"Reset all warning flags for {employee.Mail}");
                         break;
                 }
             }
@@ -149,14 +149,16 @@
                     message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
 #if DEBUG
                     message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", "roberto.corradetti@vigilfuoco.it"));
+                    message.Subject = "*** DEBUG *** Procedura Patenti WEB - Avviso scadenza patente *** DEBUG ***";
 #else
                     message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
                     foreach (string mailBcc in settings.MailBcc)
                     {
                         message.Bcc.Add(new MailboxAddress(mailBcc, mailBcc));
                     }
-#endif
+
                     message.Subject = "Procedura Patenti WEB - Avviso scadenza patente";
+#endif
                     message.Body = MailHtmlBody(employee, license);
 
                     client.Send(message);
@@ -174,24 +176,25 @@
         private static MimeEntity MailHtmlBody(Employee employee, License license)
         {
             var builder = new BodyBuilder();
+            var cultureInfoIta = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
 
             builder.HtmlBody = $"Buongiorno {employee.FirstName} {employee.LastName}<br/>";
             builder.HtmlBody += $"<br/>";
             if (DateTime.Now > license.ExpirationDate)
             {
                 builder.HtmlBody += $"La tua patente è <b>SCADUTA</b><br/>";
-                Log.Debug($"License expired: {license.ExpirationDate:d}");
+                Log.Debug(string.Create(cultureInfoIta, $"License expired: {license.ExpirationDate:d}"));
             }
             else
             {
-                builder.HtmlBody += $"La tua patente di <b>{license.Category}</b> scadrà il/l' <b>{license.ExpirationDate:d}</b>.<br/>";
-                Log.Debug($"License expiring on {license.ExpirationDate:d}");
+                builder.HtmlBody += string.Create(cultureInfoIta, $"La tua patente di <b>{license.Category}</b> scadrà il/l' <b>{license.ExpirationDate:d}</b>.<br/>");
+                Log.Debug(string.Create(cultureInfoIta, $"License expiring on {license.ExpirationDate:d}"));
             }
-            builder.HtmlBody += $"<br/>";
-            builder.HtmlBody += $"Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.";
-            builder.HtmlBody += $"<br/>";
-            builder.HtmlBody += $"<br/>";
-            builder.HtmlBody += $"<small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small>";
+            builder.HtmlBody += "<br/>";
+            builder.HtmlBody += "Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.";
+            builder.HtmlBody += "<br/>";
+            builder.HtmlBody += "<br/>";
+            builder.HtmlBody += "<small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small>";
 
             return builder.ToMessageBody();
         }

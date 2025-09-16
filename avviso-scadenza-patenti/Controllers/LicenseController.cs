@@ -13,7 +13,7 @@
     internal class LicenseController
     {
         protected static IList<License> licenses;
-        private static readonly string csvFilename = @".\SRLArchivioPatenti.csv";
+        private static readonly string csvFilename = $"{AppDomain.CurrentDomain.BaseDirectory}SRLArchivioPatenti.csv";
 
         static LicenseController()
         {

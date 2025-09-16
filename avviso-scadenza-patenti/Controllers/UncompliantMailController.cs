@@ -4,7 +4,6 @@
     using System.Globalization;
     using System.IO;
     using System.Linq;
-    using System.Text.RegularExpressions;
 
     using avviso_scadenza_patenti.Entities;
 
@@ -15,7 +14,7 @@
     internal class UncompliantMailController
     {
         protected static IList<UncompliantMail> uncompliantsMail;
-        private static readonly string csvFilename = @".\UncompliantMail.csv";
+        private static readonly string csvFilename = $"{AppDomain.CurrentDomain.BaseDirectory}UncompliantMail.csv";
 
         static UncompliantMailController()
         {
