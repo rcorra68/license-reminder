@@ -149,7 +149,7 @@
                     message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
 #if DEBUG
                     message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", "roberto.corradetti@vigilfuoco.it"));
-                    message.Subject = "*** DEBUG *** Procedura Patenti WEB - Avviso scadenza patente *** DEBUG ***";
+                    message.Subject = "*** DEBUG *** Avviso scadenza patente *** DEBUG ***";
 #else
                     message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
                     foreach (string mailBcc in settings.MailBcc)
@@ -157,7 +157,7 @@
                         message.Bcc.Add(new MailboxAddress(mailBcc, mailBcc));
                     }
 
-                    message.Subject = "Procedura Patenti WEB - Avviso scadenza patente";
+                    message.Subject = "Avviso scadenza patente";
 #endif
                     message.Body = MailHtmlBody(employee, license);
 
