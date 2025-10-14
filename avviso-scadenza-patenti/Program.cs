@@ -45,7 +45,7 @@
                 if (employee == null)
                 {
                     employee = EmployeeController.Create(license.LastName, license.FirstName);
-                    Log.Information($"Create new Employee: {0} {1} - {2}", employee.LastName, employee.FirstName, employee.Mail);
+                    Log.Information($"Create new Employee: {employee.LastName} {employee.FirstName} - {employee.Mail}");
                 }
 
                 // Verifica la scadenza della patente
