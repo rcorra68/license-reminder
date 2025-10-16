@@ -61,19 +61,27 @@
                 
                 p.Parse(args);
 
+                if (showHelp)
+                {
+                    Log.Debug($"Show syntax help.");
+                    ShowHelp(p);
+
+                    return;
+                }
+
                 if (cryptPassword)
                 {
                     byte[] binaryData = Encoding.UTF8.GetBytes(password);
                     string encodedPassword = Convert.ToBase64String(binaryData);
 
-                    settings.MailServer.Password = encodedPassword;
                     Log.Debug($"Write new encoded password: {encodedPassword}");
+                    settings.MailServer.Password = encodedPassword;
+
+                    return;
                 }
-                else
-                {
-                    // Esegue il controllo sulla scadenza delle patenti
-                    DriveLicenseIterate();
-                }
+
+                // Esegue il controllo sulla scadenza delle patenti
+                DriveLicenseIterate();
             }
             catch (Exception ex)
             {
@@ -261,6 +269,14 @@
             }
 
             return builder.ToMessageBody();
+        }
+
+        static void ShowHelp(OptionSet p)
+        {
+            Console.WriteLine("Usage: avviso-scadenza-patenti [OPTIONS]");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            p.WriteOptionDescriptions(Console.Out);
         }
     }
 }
