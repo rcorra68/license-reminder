@@ -63,6 +63,7 @@
 
                 if (showHelp)
                 {
+                    // Se è presente il parametro "h|?|help" mostra l'help per la sintassi
                     Log.Debug($"Show syntax help.");
                     ShowHelp(p);
 
@@ -71,11 +72,12 @@
 
                 if (cryptPassword)
                 {
+                    // Se è presente il parametro "c|crypt" crypta e salva la password
                     byte[] binaryData = Encoding.UTF8.GetBytes(password);
                     string encodedPassword = Convert.ToBase64String(binaryData);
 
                     Log.Debug($"Write new encoded password: {encodedPassword}");
-                    settings.MailServer.Password = encodedPassword;
+                    Console.WriteLine($"Save the crypted password '{encodedPassword}' on appsettings.json");
 
                     return;
                 }
