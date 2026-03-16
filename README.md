@@ -30,20 +30,18 @@ The project follows the **Clean Architecture** principles and **SOLID** patterns
 ## ⚙️ Installation & Setup
 
 1. **Clone the repository**:
-   ```bash
-   git clone [https://github.com/your-username/license-guardian.git](https://github.com/your-username/license-guardian.git)
-   cd license-guardian
-
+```bash
+git clone [https://github.com/your-username/license-guardian.git](https://github.com/your-username/license-guardian.git)
+cd license-guardian
 ```
 
 2. **Restore dependencies**:
 ```bash
 dotnet restore
-
 ```
 
-
 3. **Configure the application**:
+
 Update `src/ProjectName.Cli/appsettings.json` with your SMTP settings and CSV file paths.
 
 ## 🚀 Usage
@@ -52,21 +50,18 @@ Update `src/ProjectName.Cli/appsettings.json` with your SMTP settings and CSV fi
 
 ```bash
 dotnet run --project src/ProjectName.Cli/ProjectName.Cli.csproj
-
 ```
 
 ### Encrypt a password:
 
 ```bash
 dotnet run --project src/ProjectName.Cli/ProjectName.Cli.csproj -- --crypt "your_password"
-
 ```
 
 ### Show help:
 
 ```bash
 dotnet run --project src/ProjectName.Cli/ProjectName.Cli.csproj -- --help
-
 ```
 
 ## 🧪 Running Tests
@@ -75,23 +70,8 @@ To execute the unit test suite:
 
 ```bash
 dotnet test
-
 ```
 
 ## 📄 License
 
 This project is licensed under the MIT License.
-
-```
-
----
-
-### Git & DevOps Note
-
-Per aggiungere questo file al tuo branch di lavoro:
-
-**Commit message:**
-> `docs: add comprehensive README.md with project architecture and usage guide`
-
-### Prossimo Passo
-Ottimo lavoro per oggi. Il repository ora ha un aspetto davvero Senior. Quando riprenderai il progetto, vuoi che iniziamo scrivendo i **Unit Test** per la logica di riconciliazione o preferisci passare direttamente alla **"logica contorta" delle scadenze**?
