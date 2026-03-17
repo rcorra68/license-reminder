@@ -416,3 +416,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# macOS medatata
+.DS_Store
+
+# Sensitive data
+SRLArchivioPatenti.csv
