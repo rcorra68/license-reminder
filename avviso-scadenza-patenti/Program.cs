@@ -77,7 +77,7 @@
                     string encodedPassword = Convert.ToBase64String(binaryData);
 
                     Log.Debug($"Write new encoded password: {encodedPassword}");
-                    Console.WriteLine($"Save the crypted password '{encodedPassword}' on appsettings.json");
+                    Console.WriteLine($"Save the encrypted password '{encodedPassword}' on appsettings.json");
 
                     return;
                 }

@@ -2,7 +2,7 @@
   "profiles": {
     "avviso-scadenza-patenti": {
       "commandName": "Project",
-      "commandLineArgs": "-c=Conco+1070"
+      "commandLineArgs": "--crypt=Pinco+1071"
     }
   }
 }
