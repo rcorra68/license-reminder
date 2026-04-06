@@ -35,6 +35,7 @@ The project follows **Clean Architecture** principles and **SOLID** patterns, or
 ```bash
 git clone [https://github.com/rcorra68/license-reminder.git](https://github.com/rcorra68/license-reminder.git)
 cd license-reminder
+```
 
 ## 🗺️ Roadmap
 - [ ] Implement xUnit & Moq test suite for Orchestrator logic.
