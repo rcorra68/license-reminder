@@ -18,17 +18,17 @@ using AvvisoScadenzaPatenti.Infrastructure.Repositories;
 var parserResult = Parser.Default.ParseArguments<Options>(args);
 
 // 2. Handle the successful parsing case asynchronously
-// This will initialize the DI container and run the Orchestrator
-await parserResult.WithParsedAsync(async opts => 
+// This will initialize the DI container and run the orchestrator
+await parserResult.WithParsedAsync(async opts =>
 {
-    // Check if the user wants to encrypt a password
+    // Check if the user wants to encrypt a password and save it to appsettings.json
     if (!string.IsNullOrEmpty(opts.PasswordToCrypt))
     {
         EncryptAndSavePassword(opts.PasswordToCrypt);
-        return; // Exit the program after encryption
+        return; // Exit the program after encryption, no further processing
     }
 
-    // Normal execution
+    // Normal execution: run the orchestrator that processes licenses and employees
     await RunOrchestratorAsync(opts);
 });
 
@@ -37,12 +37,15 @@ parserResult.WithNotParsed(HandleParseErrors);
 
 // --- SEPARATED FUNCTIONS ---
 
-// Function 1: Logic to build the host and run the Orchestrator
+/// <summary>
+/// Builds the host and runs the LicenseOrchestrator using the parsed options.
+/// </summary>
+/// <param name="opts">The parsed command‑line options.</param>
 async Task RunOrchestratorAsync(Options opts)
 {
     var builder = Host.CreateApplicationBuilder(args);
 
-    // Call the service configuration function
+    // Call the service configuration function to register repositories, orchestrator, etc.
     ConfigureServices(builder, opts);
 
     using IHost host = builder.Build();
@@ -52,29 +55,45 @@ async Task RunOrchestratorAsync(Options opts)
     await orchestrator.ProcessLicensesAsync();
 }
 
-// Function 2: Logic to register dependencies
+/// <summary>
+/// Configures the services (DI container) for the host, including repositories and orchestrator.
+/// Reads paths from the appsettings.json section "DataSources".
+/// </summary>
+/// <param name="builder">The host application builder.</param>
+/// <param name="opts">The parsed command‑line options.</param>
 void ConfigureServices(HostApplicationBuilder builder, Options opts)
 {
     var dataSources = builder.Configuration.GetSection("DataSources");
 
-    // Register Repositories with paths from appsettings.json
-    builder.Services.AddSingleton<IEmployeeRepository>(sp => 
-        new EmployeeRepository(dataSources["EmployeesFilePath"] ?? "employees.csv", sp.GetRequiredService<ILogger<EmployeeRepository>>()));
+    // Register repositories with file paths from appsettings.json (with fallbacks)
+    builder.Services.AddSingleton<IEmployeeRepository>(sp =>
+        new EmployeeRepository(
+            dataSources["EmployeesFilePath"] ?? "employees.csv",
+            sp.GetRequiredService<ILogger<EmployeeRepository>>()));
 
-    builder.Services.AddSingleton<ILicenseRepository>(sp => 
-        new LicenseRepository(dataSources["LicensesFilePath"] ?? "licenses.csv", sp.GetRequiredService<ILogger<LicenseRepository>>()));
+    builder.Services.AddSingleton<ILicenseRepository>(sp =>
+        new LicenseRepository(
+            dataSources["LicensesFilePath"] ?? "licenses.csv",
+            sp.GetRequiredService<ILogger<LicenseRepository>>()));
 
-    builder.Services.AddSingleton<IUncompliantMailRepository>(sp => 
-        new UncompliantMailRepository(dataSources["UncompliantMailsFilePath"] ?? "uncompliant_mails.csv", sp.GetRequiredService<ILogger<UncompliantMailRepository>>()));
+    builder.Services.AddSingleton<IUncompliantMailRepository>(sp =>
+        new UncompliantMailRepository(
+            dataSources["UncompliantMailsFilePath"] ?? "uncompliant_mails.csv",
+            sp.GetRequiredService<ILogger<UncompliantMailRepository>>()));
 
-    // Inject Options so they are available everywhere
+    // Inject Options so they are available everywhere in the DI container
     builder.Services.AddSingleton(opts);
-    
-    // Register the Orchestrator
+
+    // Register the orchestrator as a transient service
     builder.Services.AddTransient<LicenseOrchestrator>();
 }
 
-// Function 3: Handle command line errors
+/// <summary>
+/// Handles command‑line parsing errors.
+/// If the user requested help or version, it exits without error.
+/// Otherwise it prints a brief error message and lets the application exit.
+/// </summary>
+/// <param name="errors">Sequence of parsing errors.</param>
 void HandleParseErrors(IEnumerable<Error> errors)
 {
     if (errors.Any(e => e.Tag != ErrorType.HelpRequestedError && e.Tag != ErrorType.VersionRequestedError))
@@ -83,18 +102,23 @@ void HandleParseErrors(IEnumerable<Error> errors)
     }
 }
 
+/// <summary>
+/// Encrypts the given password using Base64 encoding and saves it into appsettings.json
+/// under the path "Settings.MailServer.Password".
+/// For real security, consider using ProtectedData or a dedicated secret‑handling library.
+/// </summary>
+/// <param name="plainPassword">The plain text password to encrypt and store.</param>
 void EncryptAndSavePassword(string plainPassword)
 {
-    // 1. Simple Base64 encoding (as seen in your previous example)
-    // Note: For real security, consider using ProtectedData or a dedicated library
+    // 1. Simple Base64 encoding (not cryptographically strong, just convenient)
     byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(plainPassword);
     string encryptedPassword = Convert.ToBase64String(textBytes);
 
     string filePath = "appsettings.json";
-    
-    try 
+
+    try
     {
-        // 2. Read the existing JSON
+        // 2. Read the existing JSON file
         string json = File.ReadAllText(filePath);
         var jsonNode = JsonNode.Parse(json);
 
@@ -108,6 +132,10 @@ void EncryptAndSavePassword(string plainPassword)
             File.WriteAllText(filePath, jsonNode.ToJsonString(options));
 
             Console.WriteLine("Successfully encrypted and saved the password to appsettings.json.");
+        }
+        else
+        {
+            Console.WriteLine("Error: Could not find Settings.MailServer section in appsettings.json.");
         }
     }
     catch (Exception ex)
