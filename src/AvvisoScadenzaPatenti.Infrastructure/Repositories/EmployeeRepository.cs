@@ -5,102 +5,158 @@ using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 
+using Microsoft.Extensions.Logging;
+
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
-using AvvisoScadenzaPatenti.Core.Mappings;
 
 /// <summary>
 /// Implementation of IEmployeeRepository using CsvHelper for flat-file storage.
+/// Employs an in-memory cache to avoid repeatedly reading the CSV file.
 /// </summary>
 public class EmployeeRepository : IEmployeeRepository
 {
     private readonly string _filePath;
+    private readonly ILogger<EmployeeRepository> _logger;
     private readonly CsvConfiguration _csvConfig;
-    private List<Employee> _employees = new();
+    private List<Employee>? _cache;
 
-    public CsvEmployeeRepository(string filePath)
+    /// <summary>
+    /// Initializes a new instance of the EmployeeRepository.
+    /// </summary>
+    /// <param name="filePath">Path to the CSV file containing employee data.</param>
+    /// <param name="logger">Logger instance for diagnostic messages.</param>
+    public EmployeeRepository(string filePath, ILogger<EmployeeRepository> logger)
     {
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-        
-        // Initialize CsvHelper configuration for invariant culture
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
         _csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = true,
-            TrimOptions = TrimOptions.Trim,
-            MissingFieldFound = null // Ignore missing fields to avoid runtime exceptions
+            // Let's implement logging for missing fields instead of just ignoring them
+            MissingFieldFound = args =>
+            {
+                // Use '?' to safely handle the potential null 'HeaderNames'
+                var headerName = args.HeaderNames?.FirstOrDefault() ?? "Unknown Column";
+                _logger.LogWarning("Missing field in CSV: {HeaderName} at index {Index}",  headerName, args.Index);            
+            },
+            HeaderValidated = args =>
+            {
+                if (args.InvalidHeaders.Any())
+                {
+                    _logger.LogError("Invalid CSV Headers detected.");
+                }
+            }
         };
-
-        LoadData();
     }
 
     /// <summary>
-    /// Loads all records from the CSV file into the memory cache.
+    /// Loads all employee records from the CSV file, caching them for subsequent calls.
+    /// If the cache is already populated, returns the cached list without re‑reading the file.
+    /// If the file does not exist, returns an empty list.
     /// </summary>
-    private void LoadData()
+    /// <returns>A list of all employees.</returns>
+    public async Task<IEnumerable<Employee>> GetAllAsync()
     {
+        // Use the cache if already populated (Singleton-like pattern)
+        if (_cache != null) return _cache;
+
+        _logger.LogInformation("Cache empty. Loading employees from {Path}", _filePath);
+
+        // Check if file exists to avoid FileNotFoundException
         if (!File.Exists(_filePath))
         {
-            Log.Debug("File does not exists! Created.");
-            using (var sw = new StreamWriter(filePath, true))
-            {
-                sw.WriteLine("COGNOME,NOME,POSTA_ELETTRONICA,DUE_MESI,UN_MESE,DUE_SETTIMANE,UNA_SETTIMANA,UN_GIORNO");
-            }
-
-            _employees = new List<Employee>();
-            return;
+            _logger.LogWarning("CSV file not found. Starting with an empty list.");
+            _cache = new List<Employee>();
+            return _cache;
         }
 
         using var reader = new StreamReader(_filePath);
-        using var csv = new CsvReader(reader, _csvConfig);
-        
-        // Register the Fluent Mapping class
-        csv.Context.RegisterClassMap<EmployeeMap>();
-        
-        _employees = csv.GetRecords<Employee>().ToList();
+        using var csv = new CsvReader(reader, _csvConfig); // Use the class config!
+
+        // Load everything into memory once
+        _cache = csv.GetRecords<Employee>().ToList();
+
+        return _cache;
     }
 
     /// <summary>
-    /// Returns all employees currently in the cache.
+    /// Finds an employee by email address, ignoring case.
+    /// This will trigger a load from the CSV file if the cache is not yet initialized.
     /// </summary>
-    public IEnumerable<Employee> GetAll() => _employees;
-
-    /// <summary>
-    /// Finds a specific employee by their email address (case-insensitive).
-    /// </summary>
-    public Employee? GetByEmail(string email) 
+    /// <param name="email">The email address to search for.</param>
+    /// <returns>The matching employee, or null if not found.</returns>
+    public async Task<Employee?> GetByEmailAsync(string email)
     {
-        return _employees.FirstOrDefault(e => 
+        // This will trigger GetAllAsync only if _cache is null
+        var employees = await GetAllAsync();
+        return employees.FirstOrDefault(e =>
             e.Mail.Equals(email, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
-    /// Finds a specific employee by their lastName and firstName (case-insensitive).
+    /// Finds an employee by their lastName and firstName (case-insensitive).
+    /// This will trigger a load from the CSV file if the cache is not yet initialized.
     /// </summary>
-    public static Employee GetByName(string lastName, string firstName)
+    /// <param name="lastName">The last name to search for.</param>
+    /// <param name="firstName">The first name to search for.</param>
+    /// <returns>The matching employee, or null if not found.</returns>
+    public async Task<Employee?> GetByNameAsync(string lastName, string firstName)
     {
-        return _employees.FirstOrDefault(e => 
-            e.LastName == lastName &&
-            e.FirstName == firstName);
+        // Ensure the cache is populated before searching
+        var employees = await GetAllAsync();
+
+        // Perform a case-insensitive search on both fields
+        return employees.FirstOrDefault(e => 
+            e.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase) && 
+            e.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
-    /// Adds a new employee instance to the local cache.
+    /// Adds a new employee to the repository and persists the changes to the CSV file.
+    /// Ensures the cache is loaded before adding the record.
     /// </summary>
-    public void Add(Employee employee) 
+    /// <param name="employee">The employee to add. Must not be null.</param>
+    public async Task AddAsync(Employee employee)
     {
-        if (employee == null) throw new ArgumentNullException(nameof(employee));
-        _employees.Add(employee);
+        ArgumentNullException.ThrowIfNull(employee);
+
+        // Ensure cache is initialized from file
+        await GetAllAsync();
+
+        _cache!.Add(employee);
+
+        // Persist the updated cache to disk
+        await SaveChangesAsync();
     }
 
     /// <summary>
-    /// Persists the current state of the employee list back to the CSV file.
+    /// Writes the current cache of employees back to the CSV file, overwriting it.
+    /// Uses the class-wide CSV configuration for header and field handling.
+    /// Logs any error but does not swallow the exception.
     /// </summary>
-    public void SaveChanges()
+    private async Task SaveChangesAsync()
     {
-        using var writer = new StreamWriter(_filePath);
-        using var csv = new CsvWriter(writer, _csvConfig);
-        
-        csv.Context.RegisterClassMap<EmployeeMap>();
-        csv.WriteRecords(_employees);
+        // Safety check: if cache is null, we have nothing to save
+        if (_cache == null)
+        {
+            _logger.LogWarning("Attempted to save an uninitialized cache. Skipping write.");
+            return;
+        }
+
+        try 
+        {
+            using var writer = new StreamWriter(_filePath);
+            using var csv = new CsvWriter(writer, _csvConfig);
+            
+            // Now the compiler knows _cache is not null because of the check above
+            await csv.WriteRecordsAsync(_cache); 
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to write employees to CSV at {Path}", _filePath);
+            throw;
+        }
     }
 }

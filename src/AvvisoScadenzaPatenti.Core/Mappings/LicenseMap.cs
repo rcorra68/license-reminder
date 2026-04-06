@@ -6,7 +6,6 @@ using CsvHelper.Configuration;
 
 using AvvisoScadenzaPatenti.Core.Models;
 
-
 public sealed class LicenseMap : ClassMap<License>
 {
     public LicenseMap()
@@ -24,7 +23,7 @@ public sealed class LicenseMap : ClassMap<License>
         this.Map(m => m.ReleaseDate).Name("DATA_RILASCIO")
             .TypeConverterOption.Format(dateFormat)
             .TypeConverterOption.CultureInfo(cultureInfo);
-        this.Map(m => m.ExpirationDate).Name("DATA_SCADENZA")
+        this.Map(m => m.ExpiryDate).Name("DATA_SCADENZA")
             .TypeConverterOption.Format(dateFormat)
             .TypeConverterOption.CultureInfo(cultureInfo);
         this.Map(m => m.Status).Name("STATO");

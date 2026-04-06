@@ -3,6 +3,6 @@ namespace AvvisoScadenzaPatenti.Cli;
 using CommandLine;
 public class Options
 {
-    [Option('c', "crypt", Required = false, HelpText = "Encrypts the provided plain-text password for secure storage.")]
-    public string? PasswordToEncrypt { get; set; }
+    [Option('c', "crypt", Required = false, HelpText = "Encrypt a plain-text password and save it to appsettings.json.")]
+    public string? PasswordToCrypt { get; set; }
 }

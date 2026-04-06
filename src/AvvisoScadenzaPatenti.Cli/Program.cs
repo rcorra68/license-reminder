@@ -1,324 +1,117 @@
-﻿namespace AvvisoScadenzaPatenti.Cli;
+﻿using CommandLine;
 
-// See https://aka.ms/new-console-template for more information
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
-using System;
-using System.Text;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-using AvvisoScadenzaPatenti.Cli.AppSettings;
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Cli;
+using AvvisoScadenzaPatenti.Core.Interfaces;
+using AvvisoScadenzaPatenti.Core.Services;
+using AvvisoScadenzaPatenti.Infrastructure.Repositories;
 
-using MailKit.Net.Smtp;
-using MailKit.Security;
+// --- MAIN FLOW ---
 
-using Microsoft.Extensions.Configuration;
+// 1. Parse command-line arguments using the Options class
+var parserResult = Parser.Default.ParseArguments<Options>(args);
 
-using MimeKit;
-
-using NDesk.Options;
-
-using Serilog;
-
-class Program
+// 2. Handle the successful parsing case asynchronously
+// This will initialize the DI container and run the Orchestrator
+await parserResult.WithParsedAsync(async opts => 
 {
-    private static Settings settings = new Settings();
-
-    static void Main(string[] args)
+    // Check if the user wants to encrypt a password
+    if (!string.IsNullOrEmpty(opts.PasswordToCrypt))
     {
-        try
-        {
-            CommandLine.Parser.Default.ParseArguments<Options>(args)
-                .WithParsed(RunOptions)
-                .WithNotParsed(HandleParseError);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-
-/*         try
-        {
-            bool showHelp = false;
-            bool cryptPassword = false;
-            string password = string.Empty;
-
-            var configuration = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile($"{AppDomain.CurrentDomain.BaseDirectory}appsettings.json")
-                    .Build();
-
-            settings = configuration.GetSection("Settings").Get<Settings>();
-            if (settings == null)
-            {
-                throw new InvalidOperationException("AppSettings.json not loaded!");
-            }
-
-            Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration)
-                .CreateLogger();
-            Log.Information("Starting up!");
-
-            // Controllo dei parametri a linea di comando
-            var p = new OptionSet()
-            {
-                { "c|crypt=", v => {
-                    cryptPassword = true;
-                    password = v;
-                } },
-                { "h|?|help", v => { showHelp = v != null; } }
-            };
-
-            
-            p.Parse(args);
-
-            if (showHelp)
-            {
-                // Se è presente il parametro "h|?|help" mostra l'help per la sintassi
-                Log.Debug($"Show syntax help.");
-                ShowHelp(p);
-
-                return;
-            }
-
-            if (cryptPassword)
-            {
-                // Se è presente il parametro "c|crypt" crypta e salva la password
-                byte[] binaryData = Encoding.UTF8.GetBytes(password);
-                string encodedPassword = Convert.ToBase64String(binaryData);
-
-                Log.Debug($"Write new encoded password: {encodedPassword}");
-                Console.WriteLine($"Save the crypted password '{encodedPassword}' on appsettings.json");
-
-                return;
-            }
-
-            // Esegue il controllo sulla scadenza delle patenti
-            DriveLicenseIterate();
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, ex.Message);
-        }
-*/    
+        EncryptAndSavePassword(opts.PasswordToCrypt);
+        return; // Exit the program after encryption
     }
 
-    private static void RunOptions(Options opts)
+    // Normal execution
+    await RunOrchestratorAsync(opts);
+});
+
+// 3. Handle parsing errors or help/version requests synchronously
+parserResult.WithNotParsed(HandleParseErrors);
+
+// --- SEPARATED FUNCTIONS ---
+
+// Function 1: Logic to build the host and run the Orchestrator
+async Task RunOrchestratorAsync(Options opts)
+{
+    var builder = Host.CreateApplicationBuilder(args);
+
+    // Call the service configuration function
+    ConfigureServices(builder, opts);
+
+    using IHost host = builder.Build();
+
+    // Start the business logic
+    var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
+    await orchestrator.ProcessLicensesAsync();
+}
+
+// Function 2: Logic to register dependencies
+void ConfigureServices(HostApplicationBuilder builder, Options opts)
+{
+    var dataSources = builder.Configuration.GetSection("DataSources");
+
+    // Register Repositories with paths from appsettings.json
+    builder.Services.AddSingleton<IEmployeeRepository>(sp => 
+        new EmployeeRepository(dataSources["EmployeesFilePath"] ?? "employees.csv", sp.GetRequiredService<ILogger<EmployeeRepository>>()));
+
+    builder.Services.AddSingleton<ILicenseRepository>(sp => 
+        new LicenseRepository(dataSources["LicensesFilePath"] ?? "licenses.csv", sp.GetRequiredService<ILogger<LicenseRepository>>()));
+
+    builder.Services.AddSingleton<IUncompliantMailRepository>(sp => 
+        new UncompliantMailRepository(dataSources["UncompliantMailsFilePath"] ?? "uncompliant_mails.csv", sp.GetRequiredService<ILogger<UncompliantMailRepository>>()));
+
+    // Inject Options so they are available everywhere
+    builder.Services.AddSingleton(opts);
+    
+    // Register the Orchestrator
+    builder.Services.AddTransient<LicenseOrchestrator>();
+}
+
+// Function 3: Handle command line errors
+void HandleParseErrors(IEnumerable<Error> errors)
+{
+    if (errors.Any(e => e.Tag != ErrorType.HelpRequestedError && e.Tag != ErrorType.VersionRequestedError))
     {
-        try
-        {
-            // var parser = new CsvService();
-            // var generator = new YealinkConfigGenerator();
+        Console.WriteLine("Invalid arguments provided. Use --help for usage information.");
+    }
+}
 
-            // // 1. Read
-            // var terminals = parser.ReadRecords<Terminal>(opts.SourcePath);
+void EncryptAndSavePassword(string plainPassword)
+{
+    // 1. Simple Base64 encoding (as seen in your previous example)
+    // Note: For real security, consider using ProtectedData or a dedicated library
+    byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(plainPassword);
+    string encryptedPassword = Convert.ToBase64String(textBytes);
 
-            // // 2. Generate
-            // generator.Generate(opts.OutputPath, terminals);
-        }
-        catch (Exception ex)
+    string filePath = "appsettings.json";
+    
+    try 
+    {
+        // 2. Read the existing JSON
+        string json = File.ReadAllText(filePath);
+        var jsonNode = JsonNode.Parse(json);
+
+        // 3. Update the specific path: Settings -> MailServer -> Password
+        if (jsonNode?["Settings"]?["MailServer"] is JsonObject mailServer)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-            Console.ResetColor();
+            mailServer["Password"] = encryptedPassword;
+
+            // 4. Write back to file with nice indentation
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(filePath, jsonNode.ToJsonString(options));
+
+            Console.WriteLine("Successfully encrypted and saved the password to appsettings.json.");
         }
     }
-
-    private static void HandleParseError(IEnumerable<Error> errs)
+    catch (Exception ex)
     {
-        // Handle errors (e.g., missing required arguments)
-        Environment.Exit(1);
+        Console.WriteLine($"Error updating configuration: {ex.Message}");
     }
-
-
-/* 
-    private static void DriveLicenseIterate()
-    {
-        // Esegue un loop sulla
-        foreach (License license in LicenseController.List())
-        {
-            // Per ogni patente controlla se la relativa anagrafica è presente in archivio, altrimenti la crea
-            Employee employee = EmployeeController.Get(license.LastName, license.FirstName);
-            if (employee == null)
-            {
-                employee = EmployeeController.Create(license.LastName, license.FirstName);
-                Log.Information($"Create new Employee: {employee.LastName} {employee.FirstName} - {employee.Mail}");
-            }
-
-            // Verifica la scadenza della patente
-            CheckExpiration(license, employee);
-        }
-    }
-
-    private static void CheckExpiration(License license, Employee employee)
-    {
-        try
-        {
-            TimeSpan expirationTime = license.ExpirationDate - DateTime.Now;
-
-            if (expirationTime.Days < 0)
-            {
-                // Patente scaduta
-                Log.Debug($"Licenze expired for {employee.LastName} {employee.FirstName}: {expirationTime.Days}.");
-
-                if (expirationTime.Days % 14 == -1 || expirationTime.Days > -3)
-                {
-                    SendMail(employee, license);
-                    Log.Information($"Send mail to {employee.Mail} for expired license. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
-                }
-            }
-            else
-            {
-                // Patente in scadenza
-                Log.Debug($"Days to expiration for {employee.LastName} {employee.FirstName}: {expirationTime.Days}.");
-
-                switch (expirationTime.Days)
-                {
-                    case int n when (n <= 1):
-                        if (!employee.Warning1Day)
-                        {
-                            employee.Warning1Day = true;
-                            SendMail(employee, license);
-                            EmployeeController.Save();
-                            Log.Information($"Send mail to {employee.Mail} for expiration in 'One days'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
-                        }
-                        break;
-                    case int n when (n > 1 && n <= 7):
-                        if (!employee.Warning1Week)
-                        {
-                            employee.Warning1Week = true;
-                            SendMail(employee, license);
-                            EmployeeController.Save();
-                            Log.Information($"Send mail to {employee.Mail} for expiration in 'One Week'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
-                        }
-                        break;
-                    case int n when (n > 7 && n <= 14):
-                        if (!employee.Warning2Weeks)
-                        {
-                            employee.Warning2Weeks = true;
-                            SendMail(employee, license);
-                            EmployeeController.Save();
-                            Log.Information($"Send mail to {employee.Mail} for expiration in 'Two Weeks'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
-                        }
-                        break;
-                    case int n when (n > 14 && n <= 30):
-                        if (!employee.Warning1Month)
-                        {
-                            employee.Warning1Month = true;
-                            SendMail(employee, license);
-                            EmployeeController.Save();
-                            Log.Information($"Send mail to {employee.Mail} for expiration in 'One Month'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
-                        }
-                        break;
-                    case int n when (n > 30 && n <= 60):
-                        if (!employee.Warning2Months)
-                        {
-                            employee.Warning2Months = true;
-                            SendMail(employee, license);
-                            EmployeeController.Save();
-                            Log.Information($"Send mail to {employee.Mail} for expiration in 'Two Months'. Expiration Date: {license.ExpirationDate:dd-MM-yyyy}");
-                        }
-                        break;
-                    default:
-                        employee.Warning1Day = false;
-                        employee.Warning1Week = false;
-                        employee.Warning2Weeks = false;
-                        employee.Warning1Month = false;
-                        employee.Warning2Months = false;
-                        EmployeeController.Save();
-                        Log.Debug($"Reset all warning flags for {employee.Mail}");
-                        break;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, ex.Message);
-        }
-    }
-    private static void SendMail(Employee employee, License license)
-    {
-        try
-        {
-            using (var client = new SmtpClient())
-            {
-                // Connect to SMTP server with SSL
-                client.Connect(settings.MailServer.Host, 465, SecureSocketOptions.SslOnConnect);
-
-                // Authenticate with your SMTP credentials
-                byte[] binaryData = Convert.FromBase64String(settings.MailServer.Password);
-                string decodedPassword = Encoding.UTF8.GetString(binaryData);
-                client.Authenticate(settings.MailServer.Username, decodedPassword);
-
-                // Create warning message
-                var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
-#if DEBUG
-                message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", "roberto.corradetti@vigilfuoco.it"));
-                message.Subject = "*** DEBUG *** Avviso scadenza patente *** DEBUG ***";
-#else
-                message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
-                foreach (string mailBcc in settings.MailBcc)
-                {
-                    message.Bcc.Add(new MailboxAddress(mailBcc, mailBcc));
-                }
-
-                message.Subject = "Avviso scadenza patente";
-#endif
-                message.Body = MailHtmlBody(employee, license);
-
-                client.Send(message);
-                client.Disconnect(true);
-            }
-
-            Log.Information($"Successfully send message to: {employee.Mail}");
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"Error when send message to: {employee.Mail} ({ex.ToString()})");
-        }
-    }
-
-    private static MimeEntity MailHtmlBody(Employee employee, License license)
-    {
-        var builder = new BodyBuilder();
-
-        try
-        {
-            var cultureInfoIta = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
-
-            builder.HtmlBody = $"Buongiorno {employee.FirstName} {employee.LastName}<br/>";
-            builder.HtmlBody += $"<br/>";
-            if (DateTime.Now > license.ExpirationDate)
-            {
-                builder.HtmlBody += $"La tua patente è <b>SCADUTA</b><br/>";
-                Log.Debug(string.Create(cultureInfoIta, $"License expired: {license.ExpirationDate:d}"));
-            }
-            else
-            {
-                builder.HtmlBody += string.Create(cultureInfoIta, $"La tua patente di <b>{license.Category}</b> scadrà il/l' <b>{license.ExpirationDate:d}</b>.<br/>");
-                Log.Debug(string.Create(cultureInfoIta, $"License expiring on {license.ExpirationDate:d}"));
-            }
-            builder.HtmlBody += "<br/>";
-            builder.HtmlBody += "Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.";
-            builder.HtmlBody += "<br/>";
-            builder.HtmlBody += "<br/>";
-            builder.HtmlBody += "<small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small>";
-
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, ex.Message);
-        }
-
-        return builder.ToMessageBody();
-    }
-
-    static void ShowHelp(OptionSet p)
-    {
-        Console.WriteLine("Usage: avviso-scadenza-patenti [OPTIONS]");
-        Console.WriteLine();
-        Console.WriteLine("Options:");
-        p.WriteOptionDescriptions(Console.Out);
-    }
- */
- }
+}

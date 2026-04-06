@@ -1,7 +1,9 @@
-namespace AvvisoScadenzaPatenti.Core;
+namespace AvvisoScadenzaPatenti.Core.Services;
+
+using Microsoft.Extensions.Logging;
 
 using AvvisoScadenzaPatenti.Core.Models;
-using AvvisoScadenzaPatenti.Infrastructure.Repositories;
+using AvvisoScadenzaPatenti.Core.Interfaces;
 public class LicenseOrchestrator
 {
     private readonly ILicenseRepository _licenseRepo;
@@ -21,55 +23,60 @@ public class LicenseOrchestrator
         _logger = logger;
     }
 
-    public void ProcessLicenses()
+    /// <summary>
+    /// Processes all licenses asynchronously and updates or creates associated employees.
+    /// </summary>
+    public async Task ProcessLicensesAsync()
     {
-        var licenses = _licenseRepo.GetAll();
+        // Do not use .Result here; use await instead
+        var licenses = await _licenseRepo.GetAllAsync();
 
         foreach (var license in licenses)
         {
-            // 1. Try to find the employee
-            var employee = _employeeRepo.GetByName(license.FirstName, license.LastName);
+            // The repository handles finding or creating (and saving) the employee
+            var employee = await GetOrCreateEmployeeAsync(license.FirstName, license.LastName);
 
-            if (employee == null)
-            {
-                _logger.LogInformation("Employee {First} {Last} not found. Handling new record...", license.FirstName, license.LastName);
-                employee = CreateNewEmployee(license.FirstName, license.LastName);
-            }
-
-            // 2. Process Expiry Logic (to be detailed later)
-            EvaluateExpiry(license, employee);
+            // Evaluate and handle expiration logic for this license and employee
+            await EvaluateExpiryAsync(license, employee);
         }
 
-        // 3. Persist changes to Employee CSV if any new records were added
-        _employeeRepo.SaveChanges();
+        // Log successful completion of the processing
+        _logger.LogInformation("Processing completed successfully.");
     }
 
-    private Employee CreateNewEmployee(string firstName, string lastName)
+    /// <summary>
+    /// Retrieves an existing employee or creates a new one with a calculated or uncompliant email.
+    /// </summary>
+    private async Task<Employee> GetOrCreateEmployeeAsync(string firstName, string lastName, UncompliantMail? uncompliant = null)
     {
-        // Check for uncompliant emails first
-        var uncompliant = _uncompliantRepo.GetByFullname(firstName, lastName);
-        
-        string email = uncompliant != null 
-            ? uncompliant.Email 
-            : $"{firstName.ToLower()}.{lastName.ToLower()}@company.com";
+        // Check if the employee already exists (case-insensitive check)
+        var employee = await _employeeRepo.GetByNameAsync(firstName, lastName);
+
+        if (employee != null)
+        {
+            return employee;
+        }
+
+        _logger.LogInformation("Creating new record for {FirstName} {LastName}", firstName, lastName);
+
+        // Build fallback email if no uncompliant record is provided
+        string email = uncompliant?.Mail ?? 
+                    $"{firstName.ToLower().Trim()}.{lastName.ToLower().Trim()}@vigilfuoco.it";
 
         var newEmployee = new Employee
         {
             FirstName = firstName,
             LastName = lastName,
-            Mail = email,
-            Warning2Months = false, // Default values
-            Warning1Month = false, // Default values
-            Warning2Weeks = false, // Default values
-            Warning1Week = false, // Default values
-            Warning1Day = false, // Default values
+            Mail = email
+            // Warning flags are handled by Employee class defaults
         };
 
-        _employeeRepo.Add(newEmployee);
+        // Persist the new record
+        await _employeeRepo.AddAsync(newEmployee);
+
         return newEmployee;
     }
-
-    private void EvaluateExpiry(License license, Employee employee)
+    private async Task EvaluateExpiryAsync(License license, Employee employee)
     {
         // Placeholder for your contorted logic
         // TODO: Implement date comparison and email trigger logic
