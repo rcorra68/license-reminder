@@ -152,8 +152,9 @@ public class EmployeeRepository : IEmployeeRepository
         // Find the index of the existing record. 
         // We match by Name and LastName (case-insensitive) as per your current business logic.
         int index = _cache.FindIndex(e =>
-            string.Equals(e.FirstName, employee.FirstName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(e.LastName, employee.LastName, StringComparison.OrdinalIgnoreCase));
+            e != null && // Controllo che l'elemento della lista non sia null
+            string.Equals(e.FirstName, employee?.FirstName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(e.LastName, employee?.LastName, StringComparison.OrdinalIgnoreCase));
 
         if (index != -1)
         {

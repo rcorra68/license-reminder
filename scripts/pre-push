@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# --- 1. Check for Pending Reminders (TODO/FIXME) ---
+echo -e "\n\033[0;34m[INFO]\033[0m Checking for TODO or FIXME in source files..."
+
+# Cerchiamo solo nelle cartelle src e tests, escludendo file generati
+# Usiamo --include per limitare i tipi di file
+MATCHES=$(grep -rE "FIXME|TODO" ./src ./tests \
+    --include="*.cs" \
+    --include="*.props" \
+    --include="*.json" \
+    --exclude-dir=obj \
+    --exclude-dir=bin)
+
+if [ ! -z "$MATCHES" ]; then
+    echo -e "\033[0;33m[WARNING]\033[0m Pending reminders found in your code:"
+    
+# --- 2. Run Unit Tests (Hard Block) ---
+echo -e "\033[0;34m[INFO]\033[0m Running unit tests before push..."
+
+# We use 'dotnet test' with Release configuration for a formal check
+dotnet test --configuration Release --nologo
+
+# Capture the exit code of the last command
+RESULT=$?
+
+if [ $RESULT -ne 0 ]; then
+    echo -e "\n\033[0;31m[ERROR]\033[0m Tests failed! Push aborted."
+    echo "Please fix the failing tests before pushing your changes."
+    exit 1
+fi
+
+echo -e "\n\033[0;32m[SUCCESS]\033[0m All checks passed. Proceeding with push...\n"
+exit 0
