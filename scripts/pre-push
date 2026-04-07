@@ -14,7 +14,8 @@ MATCHES=$(grep -rE "FIXME|TODO" ./src ./tests \
 
 if [ ! -z "$MATCHES" ]; then
     echo -e "\033[0;33m[WARNING]\033[0m Pending reminders found in your code:"
-    
+fi
+ 
 # --- 2. Run Unit Tests (Hard Block) ---
 echo -e "\033[0;34m[INFO]\033[0m Running unit tests before push..."
 
