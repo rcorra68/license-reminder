@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "avviso-scadenza-patenti": {
-      "commandName": "Project",
-      "commandLineArgs": "--crypt=Pinco+1071"
-    }
-  }
-}
