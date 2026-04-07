@@ -15,11 +15,14 @@ public interface IUncompliantMailRepository
     Task<IEnumerable<UncompliantMail>> GetAllAsync();
 
     /// <summary>
-    /// Finds an employee's email based on the first and last name in the uncompliant mail records.
-    /// Returns a minimal employee object containing only the email, or null if no match is found.
+    /// Retrieves the email address from uncompliant mail records by matching first and last name.
+    /// Returns a minimal <see cref="UncompliantMail"/> object containing only the email, or <c>null</c> if no match found.
     /// </summary>
-    /// <param name="lastName">The last name to search for.</param>
-    /// <param name="firstName">The first name to search for.</param>
-    /// <returns>An Employee with the email from the uncompliant record, or null if not found.</returns>
-    Task<Employee?> GetByNameAsync(string lastName, string firstName);
+    /// <param name="firstName">The first name to search for (case-insensitive).</param>
+    /// <param name="lastName">The last name to search for (case-insensitive).</param>
+    /// <returns>
+    /// A <see cref="UncompliantMail"/> object with the matching email from uncompliant records, 
+    /// or <c>null</c> if no matching record is found.
+    /// </returns>
+    Task<UncompliantMail?> GetByNameAsync(string firstName, string lastName);
 }

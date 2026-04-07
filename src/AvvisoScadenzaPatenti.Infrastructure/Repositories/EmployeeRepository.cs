@@ -2,13 +2,14 @@ namespace AvvisoScadenzaPatenti.Infrastructure.Repositories;
 
 using System.Globalization;
 
+using AvvisoScadenzaPatenti.Core.Interfaces;
+using AvvisoScadenzaPatenti.Core.Mappings;
+using AvvisoScadenzaPatenti.Core.Models;
+
 using CsvHelper;
 using CsvHelper.Configuration;
 
 using Microsoft.Extensions.Logging;
-
-using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Models;
 
 /// <summary>
 /// Implementation of IEmployeeRepository using CsvHelper for flat-file storage.
@@ -75,6 +76,9 @@ public class EmployeeRepository : IEmployeeRepository
         using var reader = new StreamReader(_filePath);
         using var csv = new CsvReader(reader, _csvConfig); // Use the class config!
 
+        // Register the mapping here so CsvReader knows how to bind columns to properties
+        csv.Context.RegisterClassMap<EmployeeMap>();
+
         // Load everything into memory once
         _cache = csv.GetRecords<Employee>().ToList();
 
@@ -99,10 +103,10 @@ public class EmployeeRepository : IEmployeeRepository
     /// Finds an employee by their lastName and firstName (case-insensitive).
     /// This will trigger a load from the CSV file if the cache is not yet initialized.
     /// </summary>
-    /// <param name="lastName">The last name to search for.</param>
     /// <param name="firstName">The first name to search for.</param>
+    /// <param name="lastName">The last name to search for.</param>
     /// <returns>The matching employee, or null if not found.</returns>
-    public async Task<Employee?> GetByNameAsync(string lastName, string firstName)
+    public async Task<Employee?> GetByNameAsync(string firstName, string lastName)
     {
         // Ensure the cache is populated before searching
         var employees = await GetAllAsync();
@@ -114,10 +118,11 @@ public class EmployeeRepository : IEmployeeRepository
     }
 
     /// <summary>
-    /// Adds a new employee to the repository and persists the changes to the CSV file.
-    /// Ensures the cache is loaded before adding the record.
+    /// Adds a new employee to the repository.
+    /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to add. Must not be null.</param>
+    /// <returns>A task representing the asynchronous add operation.</returns>
     public async Task AddAsync(Employee employee)
     {
         ArgumentNullException.ThrowIfNull(employee);
@@ -129,6 +134,42 @@ public class EmployeeRepository : IEmployeeRepository
 
         // Persist the updated cache to disk
         await SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Updates an existing employee in the repository.
+    /// After this call, the repository is responsible for persisting the change.
+    /// </summary>
+    /// <param name="employee">The employee to update. Must not be null and must exist in the repository.</param>
+    /// <returns>A task representing the asynchronous update operation.</returns>
+    public async Task UpdateAsync(Employee employee)
+    {
+        ArgumentNullException.ThrowIfNull(employee);
+
+        // Ensure cache is initialized from file
+        await GetAllAsync();
+
+        // Find the index of the existing record. 
+        // We match by Name and LastName (case-insensitive) as per your current business logic.
+        int index = _cache.FindIndex(e =>
+            string.Equals(e.FirstName, employee.FirstName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(e.LastName, employee.LastName, StringComparison.OrdinalIgnoreCase));
+
+        if (index != -1)
+        {
+            // Replace the old object with the updated one
+            _cache[index] = employee;
+
+            _logger.LogDebug("Updated employee {LastName} in memory cache.", employee.LastName);
+
+            // Persist the updated list to the CSV file
+            await SaveChangesAsync();
+        }
+        else
+        {
+            _logger.LogWarning("Attempted to update non-existent employee: {LastName} {FirstName}",
+                employee.LastName, employee.FirstName);
+        }
     }
 
     /// <summary>
@@ -149,7 +190,10 @@ public class EmployeeRepository : IEmployeeRepository
         {
             using var writer = new StreamWriter(_filePath);
             using var csv = new CsvWriter(writer, _csvConfig);
-            
+
+            // Register the mapping here so CsvReader knows how to bind columns to properties
+            csv.Context.RegisterClassMap<EmployeeMap>();
+
             // Now the compiler knows _cache is not null because of the check above
             await csv.WriteRecordsAsync(_cache); 
         }

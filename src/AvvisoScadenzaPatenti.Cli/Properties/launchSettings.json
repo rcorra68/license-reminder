@@ -1,8 +1,7 @@
 {
   "profiles": {
     "avviso-scadenza-patenti": {
-      "commandName": "Project",
-      "commandLineArgs": "-c=Conco+1070"
+      "commandName": "Project"
     }
   }
 }

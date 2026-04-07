@@ -2,13 +2,14 @@ namespace AvvisoScadenzaPatenti.Infrastructure.Repositories;
 
 using System.Globalization;
 
+using AvvisoScadenzaPatenti.Core.Interfaces;
+using AvvisoScadenzaPatenti.Core.Mappings;
+using AvvisoScadenzaPatenti.Core.Models;
+
 using CsvHelper;
 using CsvHelper.Configuration;
 
 using Microsoft.Extensions.Logging;
-
-using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Models;
 
 /// <summary>
 /// Implementation of LicenseRepository using CsvHelper for flat-file storage.
@@ -39,7 +40,7 @@ public class LicenseRepository : ILicenseRepository
             {
                 // Use '?' to safely handle the potential null 'HeaderNames'
                 var headerName = args.HeaderNames?.FirstOrDefault() ?? "Unknown Column";
-                _logger.LogWarning("Missing field in CSV: {HeaderName} at index {Index}",  headerName, args.Index);            
+                _logger.LogWarning("Missing field in CSV: {HeaderName} at index {Index}",  headerName, args.Index);
             },
             HeaderValidated = args =>
             {
@@ -63,6 +64,9 @@ public class LicenseRepository : ILicenseRepository
 
         using var reader = new StreamReader(_filePath);
         using var csv = new CsvReader(reader, _csvConfig); // Use the class-wide configuration
+
+        // Register the mapping here so CsvReader knows how to bind columns to properties
+        csv.Context.RegisterClassMap<LicenseMap>();
 
         var records = csv.GetRecords<License>().ToList();
         _cache = records;

@@ -37,6 +37,43 @@ git clone [https://github.com/rcorra68/license-reminder.git](https://github.com/
 cd license-reminder
 ```
 
+2. **Restore dependencies**:
+```bash
+dotnet restore
+```
+
+3. **Configure the application**:
+
+Update `src/AvvisoScadenzaPatenti.Cli/appsettings.json` with your SMTP settings and CSV file paths.
+
+## 🚀 Usage
+
+### Run the application:
+
+```bash
+dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj
+```
+
+### Encrypt a password:
+
+```bash
+dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --crypt "your_password"
+```
+
+### Show help:
+
+```bash
+dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --help
+```
+
+## 🧪 Running Tests
+
+To execute the unit test suite:
+
+```bash
+dotnet test
+```
+
 ## 🗺️ Roadmap
 - [ ] Implement xUnit & Moq test suite for Orchestrator logic.
 - [ ] Upgrade Base64 encryption to .NET Data Protection API for enhanced security.

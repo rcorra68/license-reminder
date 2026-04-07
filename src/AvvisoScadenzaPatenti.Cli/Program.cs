@@ -1,16 +1,19 @@
-﻿using CommandLine;
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
+
+using AvvisoScadenzaPatenti.Cli;
+using AvvisoScadenzaPatenti.Core.Interfaces;
+using AvvisoScadenzaPatenti.Core.Services;
+using AvvisoScadenzaPatenti.Infrastructure;
+using AvvisoScadenzaPatenti.Infrastructure.Repositories;
+
+using CommandLine;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-using AvvisoScadenzaPatenti.Cli;
-using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Services;
-using AvvisoScadenzaPatenti.Infrastructure.Repositories;
+using Serilog;
 
 // --- MAIN FLOW ---
 
@@ -21,6 +24,12 @@ var parserResult = Parser.Default.ParseArguments<Options>(args);
 // This will initialize the DI container and run the orchestrator
 await parserResult.WithParsedAsync(async opts =>
 {
+    if (opts.Init)
+    {
+        InitializeConfiguration(opts.Force);
+        return;
+    }
+
     // Check if the user wants to encrypt a password and save it to appsettings.json
     if (!string.IsNullOrEmpty(opts.PasswordToCrypt))
     {
@@ -44,6 +53,15 @@ parserResult.WithNotParsed(HandleParseErrors);
 async Task RunOrchestratorAsync(Options opts)
 {
     var builder = Host.CreateApplicationBuilder(args);
+
+    // 1. Setup Serilog from appsettings.json
+    Log.Logger = new LoggerConfiguration()
+        .ReadFrom.Configuration(builder.Configuration)
+        .CreateLogger();
+
+    // 2. Tell the host to use Serilog instead of the default logger
+    builder.Logging.ClearProviders();
+    builder.Services.AddSerilog();
 
     // Call the service configuration function to register repositories, orchestrator, etc.
     ConfigureServices(builder, opts);
@@ -83,6 +101,9 @@ void ConfigureServices(HostApplicationBuilder builder, Options opts)
 
     // Inject Options so they are available everywhere in the DI container
     builder.Services.AddSingleton(opts);
+
+    // Register the Email Service
+    builder.Services.AddTransient<IEmailService, MailKitEmailService>();
 
     // Register the orchestrator as a transient service
     builder.Services.AddTransient<LicenseOrchestrator>();
@@ -141,5 +162,53 @@ void EncryptAndSavePassword(string plainPassword)
     catch (Exception ex)
     {
         Console.WriteLine($"Error updating configuration: {ex.Message}");
+    }
+}
+
+/// <summary>
+/// Creates a default appsettings.json if it doesn't exist.
+/// </summary>
+void InitializeConfiguration(bool force)
+{
+    string filePath = "appsettings.json";
+
+    if (File.Exists(filePath) && !force)
+    {
+        Console.WriteLine("Configuration file already exists. Use --force to overwrite.");
+        return;
+    }
+
+    var defaultConfig = new
+    {
+        Settings = new
+        {
+            MailServer = new
+            {
+                Host = "smtp.example.com",
+                Port = 587,
+                Password = ""
+            }
+        },
+        DataSources = new
+        {
+            EmployeesFilePath = "employees.csv",
+            LicensesFilePath = "licenses.csv",
+            UncompliantMailsFilePath = "uncompliant_mails.csv"
+        }
+    };
+
+    try
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string json = JsonSerializer.Serialize(defaultConfig, options);
+        File.WriteAllText(filePath, json);
+
+        Console.WriteLine(force && File.Exists(filePath)
+            ? "Successfully re-initialized appsettings.json."
+            : "Successfully created appsettings.json.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error creating configuration: {ex.Message}");
     }
 }

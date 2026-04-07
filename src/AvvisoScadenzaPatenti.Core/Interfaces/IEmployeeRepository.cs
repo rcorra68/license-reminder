@@ -23,15 +23,24 @@ public interface IEmployeeRepository
     /// <summary>
     /// Finds an employee by first and last name.
     /// </summary>
-    /// <param name="lastName">The last name to search for.</param>
     /// <param name="firstName">The first name to search for.</param>
+    /// <param name="lastName">The last name to search for.</param>
     /// <returns>The matching employee, or null if not found.</returns>
-    Task<Employee?> GetByNameAsync(string lastName, string firstName);
+    Task<Employee?> GetByNameAsync(string firstName, string lastName);
 
     /// <summary>
     /// Adds a new employee to the repository.
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to add. Must not be null.</param>
+    /// <returns>A task representing the asynchronous add operation.</returns>
     Task AddAsync(Employee employee);
+
+    /// <summary>
+    /// Updates an existing employee in the repository.
+    /// After this call, the repository is responsible for persisting the change.
+    /// </summary>
+    /// <param name="employee">The employee to update. Must not be null and must exist in the repository.</param>
+    /// <returns>A task representing the asynchronous update operation.</returns>
+    Task UpdateAsync(Employee employee);
 }

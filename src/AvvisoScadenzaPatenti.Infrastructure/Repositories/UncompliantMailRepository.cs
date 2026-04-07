@@ -2,13 +2,14 @@ namespace AvvisoScadenzaPatenti.Infrastructure.Repositories;
 
 using System.Globalization;
 
+using AvvisoScadenzaPatenti.Core.Interfaces;
+using AvvisoScadenzaPatenti.Core.Mappings;
+using AvvisoScadenzaPatenti.Core.Models;
+
 using CsvHelper;
 using CsvHelper.Configuration;
 
 using Microsoft.Extensions.Logging;
-
-using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Models;
 
 /// <summary>
 /// Implementation of UncompliantMailRepository using CsvHelper for flat-file storage.
@@ -56,28 +57,47 @@ public class UncompliantMailRepository : IUncompliantMailRepository
     /// <returns>A list of all uncompliant mail records.</returns>
     public async Task<IEnumerable<UncompliantMail>> GetAllAsync()
     {
+        // Use the cache if already populated (Singleton-like pattern)
         if (_cache != null) return _cache;
 
+        _logger.LogInformation("Cache empty. Loading uncompliant mails from {Path}", _filePath);
+
+        // Check if file exists to avoid FileNotFoundException
+        if (!File.Exists(_filePath))
+        {
+            _logger.LogWarning("CSV file not found. Starting with an empty list.");
+            _cache = new List<UncompliantMail>();
+            return _cache;
+        }
+
         using var reader = new StreamReader(_filePath);
-        using var csv = new CsvReader(reader, _csvConfig); // uses the class-wide configuration
+        using var csv = new CsvReader(reader, _csvConfig); // Use the class config!
+
+        // Register the mapping here so CsvReader knows how to bind columns to properties
+        csv.Context.RegisterClassMap<UncompliantMailMap>();
+
+        // Load everything into memory once
         _cache = csv.GetRecords<UncompliantMail>().ToList();
 
         return _cache;
     }
 
     /// <summary>
-    /// Finds an employee information based on the first and last name in the uncompliant mail records.
-    /// If a matching record is found, returns a minimal Employee object containing only the email.
-    /// If no record is found, returns null.
+    /// Finds an uncompliant mail record based on the first and last name.
+    /// Returns the full UncompliantMail object if found, otherwise null.
     /// </summary>
-    /// <param name="lastName">The last name to search for.</param>
     /// <param name="firstName">The first name to search for.</param>
-    /// <returns>An Employee with the email from the uncompliant record, or null if not found.</returns>
-    public async Task<Employee?> GetByNameAsync(string lastName, string firstName)
+    /// <param name="lastName">The last name to search for.</param>
+    /// <returns>The matching UncompliantMail record, or null if not found.</returns>
+    public async Task<UncompliantMail?> GetByNameAsync(string firstName, string lastName)
     {
-        var uncompliant = _cache?.FirstOrDefault(u => u.LastName == lastName && u.FirstName == firstName);
-        return uncompliant != null
-            ? new Employee { LastName = lastName, FirstName = firstName, Mail = uncompliant.Mail! }
-            : null;
+        // 1. Ensure the cache is populated by calling the base retrieval method
+        var uncompliants = await GetAllAsync();
+
+        // 2. Search in the returned collection (safer than accessing _cache directly)
+        // Using OrdinalIgnoreCase to avoid issues with different casing in CSV
+        return uncompliants.FirstOrDefault(u =>
+            string.Equals(u.LastName, lastName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(u.FirstName, firstName, StringComparison.OrdinalIgnoreCase));
     }
 }
