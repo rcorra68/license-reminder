@@ -1,4 +1,4 @@
-﻿namespace AvvisoScadenzaPatenti.Infrastructure;
+﻿namespace AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 
 using System.Text;
 
