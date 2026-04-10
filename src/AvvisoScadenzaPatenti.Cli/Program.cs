@@ -2,6 +2,7 @@
 using System.Text.Json.Nodes;
 
 using AvvisoScadenzaPatenti.Cli;
+using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Services;
 using AvvisoScadenzaPatenti.Infrastructure.Repositories;
@@ -9,11 +10,14 @@ using AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 
 using CommandLine;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
+
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 // --- MAIN FLOW ---
 
@@ -54,22 +58,32 @@ async Task RunOrchestratorAsync(Options opts)
 {
     var builder = Host.CreateApplicationBuilder(args);
 
-    // 1. Setup Serilog from appsettings.json
+    // Set up Serilog using the configuration from appsettings.json.
     Log.Logger = new LoggerConfiguration()
         .ReadFrom.Configuration(builder.Configuration)
         .CreateLogger();
 
-    // 2. Tell the host to use Serilog instead of the default logger
+    // Replace the default logging providers with Serilog.
     builder.Logging.ClearProviders();
     builder.Services.AddSerilog();
 
-    // Call the service configuration function to register repositories, orchestrator, etc.
+    // Register services, repositories, orchestrator, and other dependencies.
     ConfigureServices(builder, opts);
 
     using IHost host = builder.Build();
 
-    // Start the business logic
+    // Perform an SMTP health check via the email service.
+    var emailService = host.Services.GetRequiredService<IEmailService>();
     var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
+
+    // Internal logging inside VerifyEmailConnectivity will provide details.
+    if (!emailService.VerifyEmailConnectivity())
+    {
+        Log.Warning("SMTP Health Check failed. Licenses will be processed, but notifications might not be delivered.");
+        return;
+    }
+
+    // Execute the core business logic: process licenses.
     await orchestrator.ProcessLicensesAsync();
 }
 
@@ -81,6 +95,17 @@ async Task RunOrchestratorAsync(Options opts)
 /// <param name="opts">The parsed command‑line options.</param>
 void ConfigureServices(HostApplicationBuilder builder, Options opts)
 {
+    // Load the application settings section
+    var settings = builder.Configuration.GetSection("Settings").Get<AppSettings>();
+    if (settings == null)
+    {
+        // The Settings section is required for the application to function correctly
+        throw new InvalidOperationException("Critical Error: 'Settings' section not found in appsettings.json");
+    }
+
+    builder.Services.AddSingleton(settings);
+
+    // Retrieve the DataSources configuration section for later service setup
     var dataSources = builder.Configuration.GetSection("DataSources");
 
     // Register repositories with file paths from appsettings.json (with fallbacks)

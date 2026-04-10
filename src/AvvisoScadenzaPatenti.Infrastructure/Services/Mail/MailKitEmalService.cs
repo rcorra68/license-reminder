@@ -1,7 +1,10 @@
 ﻿namespace AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 
+using System.Net;
+using System.Runtime;
 using System.Text;
 
+using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
 
@@ -15,12 +18,15 @@ using MimeKit;
 
 public class MailKitEmailService : IEmailService
 {
-    private readonly IConfiguration _config;
+    private readonly AppSettings _settings;
     private readonly ILogger<MailKitEmailService> _logger;
 
-    public MailKitEmailService(IConfiguration config, ILogger<MailKitEmailService> logger)
+    public MailKitEmailService(AppSettings settings, ILogger<MailKitEmailService> logger)
     {
-        _config = config;
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        if (settings.MailServer == null)
+            throw new ArgumentException("MailServer configuration is missing", nameof(settings));
+
         _logger = logger;
     }
 
@@ -31,27 +37,19 @@ public class MailKitEmailService : IEmailService
     /// <param name="license">The license details nearing expiration.</param>
     public async Task SendExpirationNoticeAsync(Employee employee, License license, bool isExpired)
     {
-        // Retrieve SMTP settings from appsettings.json
-        var mailSettings = _config.GetSection("Settings:MailServer");
-        string host = mailSettings["Host"] ?? throw new InvalidOperationException("SMTP Host is not configured.");
-        string username = mailSettings["Username"] ?? string.Empty;
-        string base64Password = mailSettings["Password"] ?? string.Empty;
-
         // Decode Base64 password for authentication
-        string decodedPassword = Encoding.UTF8.GetString(Convert.FromBase64String(base64Password));
+        string decodedPassword = Encoding.UTF8.GetString(Convert.FromBase64String(_settings.MailServer.Password));
 
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("License Management System", username));
+        message.From.Add(new MailboxAddress("Gestione Patenti", $"noreply@vigilfuoco.it"));
         message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
 
         // Add BCC recipients from configuration array
-        var bccList = _config.GetSection("Settings:MailBcc").Get<string[]>();
-        if (bccList != null)
+        if (_settings.MailBcc != null)
         {
-            foreach (var bcc in bccList)
+            foreach (var bcc in _settings.MailBcc)
             {
-                if (MailboxAddress.TryParse(bcc, out var bccAddress))
-                    message.Bcc.Add(bccAddress);
+                if (MailboxAddress.TryParse(bcc, out var bccAddress)) message.Bcc.Add(bccAddress);
             }
         }
                 
@@ -59,29 +57,30 @@ public class MailKitEmailService : IEmailService
             ? $"ATTENZIONE: Patente SCADUTA - {employee.LastName} {employee.FirstName}"
             : $"Promemoria: Patente in scadenza - {employee.LastName} {employee.FirstName}";
 
-        var bodyBuilder = new BodyBuilder();
-        bodyBuilder.HtmlBody = $@"
-            <h3>Avviso Scadenza Documenti</h3>
-            <p>Buongiorno {employee.FirstName} {employee.LastName}</p>";
-
-        bodyBuilder.HtmlBody = isExpired
+        var statusMessage = isExpired
             ? $"La tua patente è <b>SCADUTA</b><br/>"
-            : $"<p>La tua patente di <b>{license.Category}</b> scadrà il/l'<b>{license.ExpiryDate:d}</b>.</p>";
+            : $"<p>La tua patente di <b>{license.Category}</b> scadrà il <b>{license.ExpiryDate:d}</b>.</p>";
 
-        bodyBuilder.HtmlBody += $@"<p>Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.</p>
+        var bodyBuilder = new BodyBuilder
+        {
+            HtmlBody = $@"
+            <h3>Avviso Scadenza Documenti</h3>
+            <p>Buongiorno {employee.FirstName} {employee.LastName}</p>
+            {statusMessage}
             <br/>
-            <small>***La presente mail è generata automaticamente dal sistema.Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***</small>";
+            <small>***La presente mail è generata automaticamente dal sistema.Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***</small>"
+        };
 
         message.Body = bodyBuilder.ToMessageBody();
 
         using var client = new SmtpClient();
         try
         {
-            // Connect using SMTPS (Port 465)
-            await client.ConnectAsync(host, 465, SecureSocketOptions.SslOnConnect);
+            // Connect using SMTPS (465)
+            await client.ConnectAsync(_settings.MailServer.Host, 465, SecureSocketOptions.SslOnConnect);
 
             // Authenticate using decoded credentials
-            await client.AuthenticateAsync(username, decodedPassword);
+            await client.AuthenticateAsync(_settings.MailServer.Username, decodedPassword);
 
             // Transmit the message
             await client.SendAsync(message);
@@ -97,6 +96,55 @@ public class MailKitEmailService : IEmailService
             _logger.LogError(ex, "SMTP protocol error while sending notification to {Email}", employee.Mail);
             // Re-throw to allow the orchestrator to handle the failure (e.g., logging or retry)
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Verifies SMTP connectivity and sends a test email.
+    /// Follows the Fail-Fast principle.
+    /// </summary>
+    public bool VerifyEmailConnectivity()
+    {
+        // Decode Base64 password for authentication
+        string decodedPassword = Encoding.UTF8.GetString(Convert.FromBase64String(_settings.MailServer.Password));
+
+        _logger.LogInformation("MailKit: Starting connection test to {Host}:465...", _settings.MailServer.Host);
+
+        // MimeMessage is the MailKit equivalent of MailMessage
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress("Gestione Patenti", $"noreply@vigilfuoco.it"));
+        message.To.Add(new MailboxAddress("Admin", _settings.AdminEmail ?? string.Empty));
+        message.Subject = "License-Reminder: MailKit Health Check";
+
+        message.Body = new TextPart("plain")
+        {
+            Text = $"Health check performed at {DateTime.Now}. MailKit is working correctly."
+        };
+
+        using var client = new SmtpClient();
+
+        try
+        {
+            // Connect to the server
+            // SecureSocketOptions.Auto allows MailKit to decide the best SSL/TLS strategy
+            client.Connect(_settings.MailServer.Host, 465, SecureSocketOptions.Auto);
+
+            // Authenticate if credentials are provided
+            if (!string.IsNullOrEmpty(_settings.MailServer.Username))
+            {
+                client.Authenticate(_settings.MailServer.Username, decodedPassword);
+            }
+
+            client.Send(message);
+            client.Disconnect(true);
+
+            _logger.LogInformation("MailKit: Health Check SUCCESS. Email delivered.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "MailKit: Health Check FAILED. Error: {Message}", ex.Message);
+            return false;
         }
     }
 }
