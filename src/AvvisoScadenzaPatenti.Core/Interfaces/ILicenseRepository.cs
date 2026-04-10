@@ -11,7 +11,7 @@ public interface ILicenseRepository
     /// Gets all licenses from the underlying storage (e.g. file, database).
     /// </summary>
     /// <returns>A list of all licenses.</returns>
-    Task<IEnumerable<License>> GetAllAsync();
+    IEnumerable<License> GetAll();
 
-    Task<License?> GetByLicenseNumberAsync(string licenseNumber);
+    License? GetByLicenseNumber(string licenseNumber);
 }

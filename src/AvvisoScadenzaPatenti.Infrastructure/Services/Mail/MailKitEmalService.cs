@@ -35,7 +35,7 @@ public class MailKitEmailService : IEmailService
     /// </summary>
     /// <param name="employee">The recipient employee details.</param>
     /// <param name="license">The license details nearing expiration.</param>
-    public async Task SendExpirationNoticeAsync(Employee employee, License license, bool isExpired)
+    public  Task SendExpirationNotice(Employee employee, License license, bool isExpired)
     {
         // Decode Base64 password for authentication
         string decodedPassword = Encoding.UTF8.GetString(Convert.FromBase64String(_settings.MailServer.Password));
@@ -77,16 +77,16 @@ public class MailKitEmailService : IEmailService
         try
         {
             // Connect using SMTPS (465)
-            await client.ConnectAsync(_settings.MailServer.Host, 465, SecureSocketOptions.SslOnConnect);
+            client.Connect(_settings.MailServer.Host, 465, SecureSocketOptions.SslOnConnect);
 
             // Authenticate using decoded credentials
-            await client.AuthenticateAsync(_settings.MailServer.Username, decodedPassword);
+            client.Authenticate(_settings.MailServer.Username, decodedPassword);
 
             // Transmit the message
-            await client.SendAsync(message);
+            client.Send(message);
 
             // Gracefully disconnect from the server
-            await client.DisconnectAsync(true);
+            client.Disconnect(true);
 
             _logger.LogInformation("Email successfully sent to {Email} regarding license expiring on {Expiry}",
                 employee.Mail, license.ExpiryDate.ToShortDateString());

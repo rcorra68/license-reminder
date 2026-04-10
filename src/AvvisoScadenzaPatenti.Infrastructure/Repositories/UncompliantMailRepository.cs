@@ -19,7 +19,7 @@ public class UncompliantMailRepository : IUncompliantMailRepository
     private readonly string _filePath;
     private readonly ILogger<UncompliantMailRepository> _logger;
     private readonly CsvConfiguration _csvConfig;
-    private List<UncompliantMail>? _cache;
+    private List<UncompliantMail> _cache = [];
 
     /// <summary>
     /// Initializes a new instance of the UncompliantMailRepository.
@@ -55,11 +55,8 @@ public class UncompliantMailRepository : IUncompliantMailRepository
     /// If the cache is already populated, returns the cached list without re‑reading the file.
     /// </summary>
     /// <returns>A list of all uncompliant mail records.</returns>
-    public async Task<IEnumerable<UncompliantMail>> GetAllAsync()
+    public  Task<IEnumerable<UncompliantMail>> GetAll()
     {
-        // Use the cache if already populated (Singleton-like pattern)
-        if (_cache != null) return _cache;
-
         _logger.LogInformation("Cache empty. Loading uncompliant mails from {Path}", _filePath);
 
         // Check if file exists to avoid FileNotFoundException
@@ -89,10 +86,10 @@ public class UncompliantMailRepository : IUncompliantMailRepository
     /// <param name="firstName">The first name to search for.</param>
     /// <param name="lastName">The last name to search for.</param>
     /// <returns>The matching UncompliantMail record, or null if not found.</returns>
-    public async Task<UncompliantMail?> GetByNameAsync(string firstName, string lastName)
+    public  Task<UncompliantMail?> GetByName(string firstName, string lastName)
     {
         // 1. Ensure the cache is populated by calling the base retrieval method
-        var uncompliants = await GetAllAsync();
+        var uncompliants = GetAll();
 
         // 2. Search in the returned collection (safer than accessing _cache directly)
         // Using OrdinalIgnoreCase to avoid issues with different casing in CSV

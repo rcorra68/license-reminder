@@ -20,7 +20,7 @@ public class LicenseRepository : ILicenseRepository
     private readonly string _filePath;
     private readonly ILogger<LicenseRepository> _logger;
     private readonly CsvConfiguration _csvConfig;
-    private List<License>? _cache;
+    private List<License> _cache = [];
 
     /// <summary>
     /// Initializes a new instance of the LicenseRepository.
@@ -58,7 +58,7 @@ public class LicenseRepository : ILicenseRepository
     /// Skips the file existence check assuming it is created by the application or provided upfront.
     /// </summary>
     /// <returns>A list of all licenses.</returns>
-    public async Task<IEnumerable<License>> GetAllAsync()
+    public IEnumerable<License> GetAll()
     {
         if (_cache != null) return _cache;
 
@@ -74,10 +74,10 @@ public class LicenseRepository : ILicenseRepository
         return _cache;
     }
 
-    public async Task<License?> GetByLicenseNumberAsync(string licenseNumber)
+    public License? GetByLicenseNumber(string licenseNumber)
     {
         // Ensure the cache is populated before searching
-        var licenses = await GetAllAsync();
+        var licenses = GetAll();
 
         // Perform a case-insensitive search on both fields
         return licenses.FirstOrDefault(e =>

@@ -35,20 +35,20 @@ public class LicenseOrchestrator
     }
 
     /// <summary>
-    /// Processes all licenses asynchronously and updates or creates associated employees.
+    /// Processes all licenses hronously and updates or creates associated employees.
     /// </summary>
-    public async Task ProcessLicensesAsync()
+    public  Task ProcessLicenses()
     {
         // Do not use .Result here; use await instead
-        var licenses = await _licenseRepo.GetAllAsync();
+        var licenses = await _licenseRepo.GetAll();
 
         foreach (var license in licenses)
         {
             // The repository handles finding or creating (and saving) the employee
-            var employee = await this.GetOrCreateEmployeeAsync(license.FirstName, license.LastName);
+            var employee = await this.GetOrCreateEmployee(license.FirstName, license.LastName);
 
             // Evaluate and handle expiration logic for this license and employee
-            await this.EvaluateExpiryAsync(license, employee);
+            await this.EvaluateExpiry(license, employee);
         }
 
         // Log successful completion of the processing
@@ -58,10 +58,10 @@ public class LicenseOrchestrator
     /// <summary>
     /// Retrieves an existing employee or creates a new one with a calculated or uncompliant email.
     /// </summary>
-    private async Task<Employee> GetOrCreateEmployeeAsync(string firstName, string lastName)
+    private  Employee> GetOrCreateEmployee(string firstName, string lastName)
     {
         // Check if the employee already exists (case-insensitive check)
-        var employee = await _employeeRepo.GetByNameAsync(firstName, lastName);
+        var employee = await _employeeRepo.GetByName(firstName, lastName);
 
         if (employee != null)
         {
@@ -71,7 +71,7 @@ public class LicenseOrchestrator
         _logger.LogInformation("Creating new record for {FirstName} {LastName}", firstName, lastName);
 
         // Check for uncompliant mail
-        var uncompliant = await _uncompliantRepo.GetByNameAsync(firstName, lastName);
+        var uncompliant = await _uncompliantRepo.GetByName(firstName, lastName);
         string email = uncompliant?.Mail ?? $"{firstName.ToLower().Trim()}.{lastName.ToLower().Trim()}@vigilfuoco.it";
 
         var newEmployee = new Employee
@@ -83,11 +83,11 @@ public class LicenseOrchestrator
         };
 
         // Persist the new record
-        await _employeeRepo.AddAsync(newEmployee);
+        await _employeeRepo.Add(newEmployee);
 
         return newEmployee;
     }
-    private async Task EvaluateExpiryAsync(License license, Employee employee)
+    private  Task EvaluateExpiry(License license, Employee employee)
     {
         try
         {
@@ -96,11 +96,11 @@ public class LicenseOrchestrator
 
             if (daysToExpiration < 0)
             {
-                await HandleExpiredAsync(license, employee, daysToExpiration);
+                await HandleExpired(license, employee, daysToExpiration);
             }
             else
             {
-                await HandleUpcomingExpirationAsync(license, employee, daysToExpiration);
+                await HandleUpcomingExpiration(license, employee, daysToExpiration);
             }
         }
         catch (Exception ex)
@@ -110,16 +110,16 @@ public class LicenseOrchestrator
         }
     }
 
-    private async Task HandleExpiredAsync(License license, Employee employee, int days)
+    private  Task HandleExpired(License license, Employee employee, int days)
     {
         // Logic for already expired licenses (e.g., notification every 14 days)
         if (days % 14 == -1 || days > -3)
         {
-            await _emailService.SendExpirationNoticeAsync(employee, license, isExpired: true);
+            await _emailService.SendExpirationNotice(employee, license, isExpired: true);
             _logger.LogInformation("Sent 'Expired' notification to {Email}", employee.Mail);
         }
     }
-    private async Task HandleUpcomingExpirationAsync(License license, Employee employee, int days)
+    private  Task HandleUpcomingExpiration(License license, Employee employee, int days)
     {
         // 1. Define thresholds in descending order
         var thresholds = new[]
@@ -141,7 +141,7 @@ public class LicenseOrchestrator
             if (employee.HasAnyWarningActive()) // Helper method for cleaner code
             {
                 employee.ResetAllWarnings();
-                await _employeeRepo.UpdateAsync(employee);
+                await _employeeRepo.Update(employee);
                 _logger.LogDebug("Reset all warning flags for {Email}", employee.Mail);
             }
             return;
@@ -156,8 +156,8 @@ public class LicenseOrchestrator
             // Set the flag, send the email, and save
             activeThreshold.SetFlag(employee, true);
 
-            await _emailService.SendExpirationNoticeAsync(employee, license, isExpired: false);
-            await _employeeRepo.UpdateAsync(employee);
+            await _emailService.SendExpirationNotice(employee, license, isExpired: false);
+            await _employeeRepo.Update(employee);
 
             _logger.LogInformation("Successfully notified {Email} for {Label} threshold",
                 employee.Mail, activeThreshold.Label);

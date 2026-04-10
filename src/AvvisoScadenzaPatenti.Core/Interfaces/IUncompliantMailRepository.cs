@@ -12,7 +12,7 @@ public interface IUncompliantMailRepository
     /// Gets all uncompliant mail records from the underlying storage (e.g. file, database).
     /// </summary>
     /// <returns>A list of all uncompliant mail records.</returns>
-    Task<IEnumerable<UncompliantMail>> GetAllAsync();
+    IEnumerable<UncompliantMail> GetAll();
 
     /// <summary>
     /// Retrieves the email address from uncompliant mail records by matching first and last name.
@@ -24,5 +24,5 @@ public interface IUncompliantMailRepository
     /// A <see cref="UncompliantMail"/> object with the matching email from uncompliant records, 
     /// or <c>null</c> if no matching record is found.
     /// </returns>
-    Task<UncompliantMail?> GetByNameAsync(string firstName, string lastName);
+    UncompliantMail? GetByName(string firstName, string lastName);
 }

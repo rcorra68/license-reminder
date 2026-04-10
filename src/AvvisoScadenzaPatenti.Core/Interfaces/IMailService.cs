@@ -7,6 +7,6 @@ using AvvisoScadenzaPatenti.Core.Models;
 // Project: Core.Interfaces
 public interface IEmailService
 {
-    Task SendExpirationNoticeAsync(Employee employee, License license, bool isExpired);
+    Task SendExpirationNotice(Employee employee, License license, bool isExpired);
     bool VerifyEmailConnectivity();
 }

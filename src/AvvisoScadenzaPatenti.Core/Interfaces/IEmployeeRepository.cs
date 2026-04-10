@@ -11,14 +11,14 @@ public interface IEmployeeRepository
     /// Gets all employees from the underlying storage (e.g. file, database).
     /// </summary>
     /// <returns>A list of all employees.</returns>
-    Task<IEnumerable<Employee>> GetAllAsync();
+    IEnumerable<Employee> GetAll();
 
     /// <summary>
     /// Finds an employee by email address, ignoring case.
     /// </summary>
     /// <param name="email">The email address to search for.</param>
     /// <returns>The matching employee, or null if not found.</returns>
-    Task<Employee?> GetByEmailAsync(string email);
+    Employee? GetByEmail(string email);
 
     /// <summary>
     /// Finds an employee by first and last name.
@@ -26,21 +26,21 @@ public interface IEmployeeRepository
     /// <param name="firstName">The first name to search for.</param>
     /// <param name="lastName">The last name to search for.</param>
     /// <returns>The matching employee, or null if not found.</returns>
-    Task<Employee?> GetByNameAsync(string firstName, string lastName);
+    Employee? GetByName(string firstName, string lastName);
 
     /// <summary>
     /// Adds a new employee to the repository.
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to add. Must not be null.</param>
-    /// <returns>A task representing the asynchronous add operation.</returns>
-    Task AddAsync(Employee employee);
+    /// <returns>A task representing the hronous add operation.</returns>
+    void Add(Employee employee);
 
     /// <summary>
     /// Updates an existing employee in the repository.
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to update. Must not be null and must exist in the repository.</param>
-    /// <returns>A task representing the asynchronous update operation.</returns>
-    Task UpdateAsync(Employee employee);
+    /// <returns>A task representing the hronous update operation.</returns>
+    void Update(Employee employee);
 }

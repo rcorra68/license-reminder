@@ -20,7 +20,7 @@ public class EmployeeRepository : IEmployeeRepository
     private readonly string _filePath;
     private readonly ILogger<EmployeeRepository> _logger;
     private readonly CsvConfiguration _csvConfig;
-    private List<Employee>? _cache;
+    private List<Employee> _cache = [];
 
     /// <summary>
     /// Initializes a new instance of the EmployeeRepository.
@@ -58,7 +58,7 @@ public class EmployeeRepository : IEmployeeRepository
     /// If the file does not exist, returns an empty list.
     /// </summary>
     /// <returns>A list of all employees.</returns>
-    public async Task<IEnumerable<Employee>> GetAllAsync()
+    public IEnumerable<Employee> GetAll()
     {
         // Use the cache if already populated (Singleton-like pattern)
         if (_cache != null) return _cache;
@@ -91,10 +91,10 @@ public class EmployeeRepository : IEmployeeRepository
     /// </summary>
     /// <param name="email">The email address to search for.</param>
     /// <returns>The matching employee, or null if not found.</returns>
-    public async Task<Employee?> GetByEmailAsync(string email)
+    public Employee? GetByEmail(string email)
     {
-        // This will trigger GetAllAsync only if _cache is null
-        var employees = await GetAllAsync();
+        // This will trigger GetAll only if _cache is null
+        var employees = GetAll();
         return employees.FirstOrDefault(e =>
             e.Mail.Equals(email, StringComparison.OrdinalIgnoreCase));
     }
@@ -106,10 +106,10 @@ public class EmployeeRepository : IEmployeeRepository
     /// <param name="firstName">The first name to search for.</param>
     /// <param name="lastName">The last name to search for.</param>
     /// <returns>The matching employee, or null if not found.</returns>
-    public async Task<Employee?> GetByNameAsync(string firstName, string lastName)
+    public Employee? GetByName(string firstName, string lastName)
     {
         // Ensure the cache is populated before searching
-        var employees = await GetAllAsync();
+        var employees = GetAll();
 
         // Perform a case-insensitive search on both fields
         return employees.FirstOrDefault(e => 
@@ -122,18 +122,18 @@ public class EmployeeRepository : IEmployeeRepository
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to add. Must not be null.</param>
-    /// <returns>A task representing the asynchronous add operation.</returns>
-    public async Task AddAsync(Employee employee)
+    /// <returns>A task representing the hronous add operation.</returns>
+    public void Add(Employee employee)
     {
         ArgumentNullException.ThrowIfNull(employee);
 
         // Ensure cache is initialized from file
-        await GetAllAsync();
+        GetAll();
 
         _cache!.Add(employee);
 
         // Persist the updated cache to disk
-        await SaveChangesAsync();
+        SaveChanges();
     }
 
     /// <summary>
@@ -141,20 +141,21 @@ public class EmployeeRepository : IEmployeeRepository
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to update. Must not be null and must exist in the repository.</param>
-    /// <returns>A task representing the asynchronous update operation.</returns>
-    public async Task UpdateAsync(Employee employee)
+    /// <returns>A task representing the hronous update operation.</returns>
+    public void Update(Employee employee)
     {
         ArgumentNullException.ThrowIfNull(employee);
 
         // Ensure cache is initialized from file
-        await GetAllAsync();
+        GetAll();
 
         // Find the index of the existing record. 
         // We match by Name and LastName (case-insensitive) as per your current business logic.
         int index = _cache.FindIndex(e =>
-            e != null && // Controllo che l'elemento della lista non sia null
-            string.Equals(e.FirstName, employee?.FirstName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(e.LastName, employee?.LastName, StringComparison.OrdinalIgnoreCase));
+            e != null &&
+            employee != null && // Verifichiamo esplicitamente che l'input non sia null
+            string.Equals(e.FirstName, employee.FirstName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(e.LastName, employee.LastName, StringComparison.OrdinalIgnoreCase));
 
         if (index != -1)
         {
@@ -164,7 +165,7 @@ public class EmployeeRepository : IEmployeeRepository
             _logger.LogDebug("Updated employee {LastName} in memory cache.", employee.LastName);
 
             // Persist the updated list to the CSV file
-            await SaveChangesAsync();
+            SaveChanges();
         }
         else
         {
@@ -178,7 +179,7 @@ public class EmployeeRepository : IEmployeeRepository
     /// Uses the class-wide CSV configuration for header and field handling.
     /// Logs any error but does not swallow the exception.
     /// </summary>
-    private async Task SaveChangesAsync()
+    private void SaveChanges()
     {
         // Safety check: if cache is null, we have nothing to save
         if (_cache == null)
@@ -196,7 +197,7 @@ public class EmployeeRepository : IEmployeeRepository
             csv.Context.RegisterClassMap<EmployeeMap>();
 
             // Now the compiler knows _cache is not null because of the check above
-            await csv.WriteRecordsAsync(_cache); 
+            csv.WriteRecords(_cache); 
         }
         catch (Exception ex)
         {
