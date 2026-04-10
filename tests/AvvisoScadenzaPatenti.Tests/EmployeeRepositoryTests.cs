@@ -10,18 +10,18 @@ using Moq;
 public class EmployeeRepositoryTests
 {
     [Fact]
-    public async Task GetAll_WhenNoEmployeesExist_ShouldReturnEmptyList()
+    public void GetAll_WhenNoEmployeesExist_ShouldReturnEmptyList()
     {
         // Arrange
         var mockRepo = new Mock<IEmployeeRepository>();
-        mockRepo.Setup(r => r.GetAllAsync())
-                .ReturnsAsync(new List<Employee>()); // Simula DB vuoto
+        mockRepo.Setup(r => r.GetAll())
+                .Returns(new List<Employee>()); // Simula DB vuoto
 
         // Act
-        var result = await mockRepo.Object.GetAllAsync();
+        var result = mockRepo.Object.GetAll();
 
         // Assert
         result.Should().BeEmpty();
-        mockRepo.Verify(r => r.GetAllAsync(), Times.Once);
+        mockRepo.Verify(r => r.GetAll(), Times.Once);
     }
 }

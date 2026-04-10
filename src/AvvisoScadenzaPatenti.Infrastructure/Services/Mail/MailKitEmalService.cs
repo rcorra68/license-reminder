@@ -35,7 +35,7 @@ public class MailKitEmailService : IEmailService
     /// </summary>
     /// <param name="employee">The recipient employee details.</param>
     /// <param name="license">The license details nearing expiration.</param>
-    public  Task SendExpirationNotice(Employee employee, License license, bool isExpired)
+    public void SendExpirationNotice(Employee employee, License license, bool isExpired)
     {
         // Decode Base64 password for authentication
         string decodedPassword = Encoding.UTF8.GetString(Convert.FromBase64String(_settings.MailServer.Password));

@@ -10,23 +10,23 @@ using Moq;
 public class LicenseRepositoryTests
 {
     [Fact]
-    public async Task GetAll_WhenNoLicensesExist_ShouldReturnEmptyList()
+    public void GetAll_WhenNoLicensesExist_ShouldReturnEmptyList()
     {
         // Arrange
         var mockRepo = new Mock<ILicenseRepository>();
-        mockRepo.Setup(r => r.GetAllAsync())
-                .ReturnsAsync(new List<License>()); // Simula DB vuoto
+        mockRepo.Setup(r => r.GetAll())
+                .Returns(new List<License>()); // Simula DB vuoto
 
         // Act
-        var result = await mockRepo.Object.GetAllAsync();
+        var result = mockRepo.Object.GetAll();
 
         // Assert
         result.Should().BeEmpty();
-        mockRepo.Verify(r => r.GetAllAsync(), Times.Once);
+        mockRepo.Verify(r => r.GetAll(), Times.Once);
     }
 
     [Fact]
-    public async Task GetByLicenseNumber_ShouldReturnCorrectLicense()
+    public void GetByLicenseNumber_ShouldReturnCorrectLicense()
     {
         // Arrange
         var mockRepo = new Mock<ILicenseRepository>();
@@ -37,11 +37,11 @@ public class LicenseRepositoryTests
             ExpiryDate = DateTime.Now
         };
 
-        mockRepo.Setup(r => r.GetByLicenseNumberAsync("27815"))
-                .ReturnsAsync(expectedLicense);
+        mockRepo.Setup(r => r.GetByLicenseNumber("27815"))
+                .Returns(expectedLicense);
 
         // Act
-        var result = await mockRepo.Object.GetByLicenseNumberAsync("27815");
+        var result = mockRepo.Object.GetByLicenseNumber("27815");
 
         // Assert
         result.Should().NotBeNull();

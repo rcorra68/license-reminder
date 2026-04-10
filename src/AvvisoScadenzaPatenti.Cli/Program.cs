@@ -84,7 +84,7 @@ async Task RunOrchestratorAsync(Options opts)
     }
 
     // Execute the core business logic: process licenses.
-    await orchestrator.ProcessLicensesAsync();
+    orchestrator.ProcessLicenses();
 }
 
 /// <summary>
