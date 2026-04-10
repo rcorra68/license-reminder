@@ -12,4 +12,6 @@ public interface ILicenseRepository
     /// </summary>
     /// <returns>A list of all licenses.</returns>
     Task<IEnumerable<License>> GetAllAsync();
+
+    Task<License?> GetByLicenseNumberAsync(string licenseNumber);
 }

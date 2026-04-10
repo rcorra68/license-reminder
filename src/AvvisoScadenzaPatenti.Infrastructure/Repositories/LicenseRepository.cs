@@ -73,4 +73,14 @@ public class LicenseRepository : ILicenseRepository
 
         return _cache;
     }
+
+    public async Task<License?> GetByLicenseNumberAsync(string licenseNumber)
+    {
+        // Ensure the cache is populated before searching
+        var licenses = await GetAllAsync();
+
+        // Perform a case-insensitive search on both fields
+        return licenses.FirstOrDefault(e =>
+            e.LicenseNumber.Equals(licenseNumber, StringComparison.OrdinalIgnoreCase));
+    }
 }
