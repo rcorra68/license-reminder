@@ -422,3 +422,8 @@ FodyWeavers.xsd
 
 # Sensitive data
 SRLArchivioPatenti.csv
+
+# DocFX artifacts
+_site/
+obj/
+api/
