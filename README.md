@@ -78,3 +78,7 @@ dotnet test
 - [ ] Implement xUnit & Moq test suite for Orchestrator logic.
 - [ ] Upgrade Base64 encryption to .NET Data Protection API for enhanced security.
 - [ ] Add support for Excel (.xlsx) data sources.
+
+## Documentation
+The complete API reference and architectural guides are available at:
+[https://rcorra68.github.io/license-reminder/](https://rcorra68.github.io/license-reminder/)
