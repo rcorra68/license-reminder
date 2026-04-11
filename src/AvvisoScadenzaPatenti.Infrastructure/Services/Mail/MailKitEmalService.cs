@@ -6,7 +6,7 @@ using System.Text;
 
 using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 using MailKit.Net.Smtp;
 using MailKit.Security;

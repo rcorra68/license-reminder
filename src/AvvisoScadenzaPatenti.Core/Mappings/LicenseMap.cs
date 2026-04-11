@@ -4,7 +4,7 @@ using System.Globalization;
 
 using CsvHelper.Configuration;
 
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 public sealed class LicenseMap : ClassMap<License>
 {

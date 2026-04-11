@@ -3,7 +3,7 @@ namespace AvvisoScadenzaPatenti.Core.Services;
 using System.Net.Mail;
 
 using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 using Microsoft.Extensions.Logging;
 
@@ -112,11 +112,18 @@ public class LicenseOrchestrator
 
     private void HandleExpired(License license, Employee employee, int days)
     {
-        // Logic for already expired licenses (e.g., notification every 14 days)
-        if (days % 14 == -1 || days > -3)
+        // Email nei primi 3 giorni dopo scadenza: 1, 2, 3 giorni
+        if (days >= -3 && days <= -1)
         {
             _emailService.SendExpirationNotice(employee, license, isExpired: true);
-            _logger.LogInformation("Sent 'Expired' notification to {Email}", employee.Mail);
+            _logger.LogInformation("Daily expired notice sent to {Email}", employee.Mail);
+            return;
+        }
+        // Poi ogni 14 giorni: 15, 29, 43...
+        if (days <= -4 && (Math.Abs(days + 3) % 14 == 0))
+        {
+            _emailService.SendExpirationNotice(employee, license, isExpired: true);
+            _logger.LogInformation("Periodic expired notice sent to {Email}", employee.Mail);
         }
     }
     private void HandleUpcomingExpiration(License license, Employee employee, int days)

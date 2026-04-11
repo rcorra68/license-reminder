@@ -2,7 +2,7 @@
 
 using System.Threading.Tasks;
 
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 // Project: Core.Interfaces
 public interface IEmailService

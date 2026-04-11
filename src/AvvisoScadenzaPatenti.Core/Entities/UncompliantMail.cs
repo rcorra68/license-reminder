@@ -1,4 +1,4 @@
-﻿namespace AvvisoScadenzaPatenti.Core.Models;
+﻿namespace AvvisoScadenzaPatenti.Core.Entities;
 
 public class UncompliantMail
 {

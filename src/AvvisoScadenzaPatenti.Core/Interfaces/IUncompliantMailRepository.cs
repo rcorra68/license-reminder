@@ -1,6 +1,6 @@
 namespace AvvisoScadenzaPatenti.Core.Interfaces;
 
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 /// <summary>
 /// Repository interface for managing uncompliant mail records in any persistence layer.

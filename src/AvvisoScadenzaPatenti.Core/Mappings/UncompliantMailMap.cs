@@ -2,7 +2,7 @@
 
 using CsvHelper.Configuration;
 
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 public sealed class UncompliantMailMap : ClassMap<UncompliantMail>
 {

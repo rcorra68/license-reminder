@@ -26,7 +26,7 @@ var parserResult = Parser.Default.ParseArguments<Options>(args);
 
 // 2. Handle the successful parsing case asynchronously
 // This will initialize the DI container and run the orchestrator
-await parserResult.WithParsedAsync(async opts =>
+parserResult.WithParsed( opts =>
 {
     if (opts.Init)
     {
@@ -42,7 +42,7 @@ await parserResult.WithParsedAsync(async opts =>
     }
 
     // Normal execution: run the orchestrator that processes licenses and employees
-    await RunOrchestratorAsync(opts);
+    RunOrchestrator(opts);
 });
 
 // 3. Handle parsing errors or help/version requests synchronously
@@ -54,7 +54,7 @@ parserResult.WithNotParsed(HandleParseErrors);
 /// Builds the host and runs the LicenseOrchestrator using the parsed options.
 /// </summary>
 /// <param name="opts">The parsed command‑line options.</param>
-async Task RunOrchestratorAsync(Options opts)
+void RunOrchestrator(Options opts)
 {
     var builder = Host.CreateApplicationBuilder(args);
 

@@ -4,7 +4,7 @@ using System.Globalization;
 
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Mappings;
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -35,13 +35,16 @@ public class EmployeeRepository : IEmployeeRepository
         _csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = true,
-            // Let's implement logging for missing fields instead of just ignoring them
+
             MissingFieldFound = args =>
             {
-                // Use '?' to safely handle the potential null 'HeaderNames'
                 var headerName = args.HeaderNames?.FirstOrDefault() ?? "Unknown Column";
-                _logger.LogWarning("Missing field in CSV: {HeaderName} at index {Index}",  headerName, args.Index);            
+                _logger.LogWarning(
+                    "Missing field in CSV: {HeaderName} at index {Index}",
+                    headerName,
+                    args.Index);
             },
+
             HeaderValidated = args =>
             {
                 if (args.InvalidHeaders.Any())
@@ -61,7 +64,7 @@ public class EmployeeRepository : IEmployeeRepository
     public IEnumerable<Employee> GetAll()
     {
         // Use the cache if already populated (Singleton-like pattern)
-        if (_cache != null) return _cache;
+        if (_cache?.Count > 0) return _cache;
 
         _logger.LogInformation("Cache empty. Loading employees from {Path}", _filePath);
 
@@ -93,10 +96,10 @@ public class EmployeeRepository : IEmployeeRepository
     /// <returns>The matching employee, or null if not found.</returns>
     public Employee? GetByEmail(string email)
     {
-        // This will trigger GetAll only if _cache is null
         var employees = GetAll();
+
         return employees.FirstOrDefault(e =>
-            e.Mail.Equals(email, StringComparison.OrdinalIgnoreCase));
+            string.Equals(e.Mail, email, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -122,17 +125,30 @@ public class EmployeeRepository : IEmployeeRepository
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to add. Must not be null.</param>
-    /// <returns>A task representing the hronous add operation.</returns>
     public void Add(Employee employee)
     {
         ArgumentNullException.ThrowIfNull(employee);
 
-        // Ensure cache is initialized from file
+        if (string.IsNullOrWhiteSpace(employee.Mail))
+            throw new ArgumentException("Employee email cannot be null or empty.", nameof(employee));
+
+        // Ensure cache is initialized
         GetAll();
 
-        _cache!.Add(employee);
+        // Check for duplicates (case-insensitive)
+        bool exists = _cache.Any(e =>
+            string.Equals(e.Mail, employee.Mail, StringComparison.OrdinalIgnoreCase));
 
-        // Persist the updated cache to disk
+        if (exists)
+        {
+            _logger.LogWarning("Attempted to add duplicate employee with email {Email}", employee.Mail);
+            throw new InvalidOperationException($"An employee with email '{employee.Mail}' already exists.");
+        }
+
+        _cache.Add(employee);
+
+        _logger.LogDebug("Added employee {Email} to cache.", employee.Mail);
+
         SaveChanges();
     }
 
@@ -141,36 +157,31 @@ public class EmployeeRepository : IEmployeeRepository
     /// After this call, the repository is responsible for persisting the change.
     /// </summary>
     /// <param name="employee">The employee to update. Must not be null and must exist in the repository.</param>
-    /// <returns>A task representing the hronous update operation.</returns>
     public void Update(Employee employee)
     {
         ArgumentNullException.ThrowIfNull(employee);
 
-        // Ensure cache is initialized from file
         GetAll();
 
         // Find the index of the existing record. 
-        // We match by Name and LastName (case-insensitive) as per your current business logic.
+        // We match by email (case-insensitive)
         int index = _cache.FindIndex(e =>
-            e != null &&
-            employee != null && // Verifichiamo esplicitamente che l'input non sia null
-            string.Equals(e.FirstName, employee.FirstName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(e.LastName, employee.LastName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(e.Mail, employee.Mail, StringComparison.OrdinalIgnoreCase));
 
         if (index != -1)
         {
             // Replace the old object with the updated one
             _cache[index] = employee;
 
-            _logger.LogDebug("Updated employee {LastName} in memory cache.", employee.LastName);
-
+            _logger.LogDebug("Updated employee {Email} in memory cache.", employee.Mail);
+            
             // Persist the updated list to the CSV file
             SaveChanges();
         }
         else
         {
-            _logger.LogWarning("Attempted to update non-existent employee: {LastName} {FirstName}",
-                employee.LastName, employee.FirstName);
+            _logger.LogWarning("Attempted to update non-existent employee with email {Email}",
+                employee.Mail);
         }
     }
 
@@ -181,13 +192,6 @@ public class EmployeeRepository : IEmployeeRepository
     /// </summary>
     private void SaveChanges()
     {
-        // Safety check: if cache is null, we have nothing to save
-        if (_cache == null)
-        {
-            _logger.LogWarning("Attempted to save an uninitialized cache. Skipping write.");
-            return;
-        }
-
         try 
         {
             using var writer = new StreamWriter(_filePath);

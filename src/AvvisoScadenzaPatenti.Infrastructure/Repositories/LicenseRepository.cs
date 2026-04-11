@@ -4,7 +4,7 @@ using System.Globalization;
 
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Mappings;
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -12,21 +12,20 @@ using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Implementation of LicenseRepository using CsvHelper for flat-file storage.
-/// Employs an in-memory cache to avoid repeatedly reading the CSV file.
+/// Implementation of ILicenseRepository using CsvHelper for flat-file storage.
+/// Provides read-only access to license data stored in a CSV file.
 /// </summary>
 public class LicenseRepository : ILicenseRepository
 {
     private readonly string _filePath;
     private readonly ILogger<LicenseRepository> _logger;
     private readonly CsvConfiguration _csvConfig;
-    private List<License> _cache = [];
 
     /// <summary>
     /// Initializes a new instance of the LicenseRepository.
     /// </summary>
     /// <param name="filePath">Path to the CSV file containing license data.</param>
-    /// <param name="logger">Logger instance for diagnostic messages.</param>
+    /// <param name="logger">Logger instance for diagnostic and error messages.</param>
     public LicenseRepository(string filePath, ILogger<LicenseRepository> logger)
     {
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
@@ -35,52 +34,59 @@ public class LicenseRepository : ILicenseRepository
         _csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = true,
-            // Let's implement logging for missing fields instead of just ignoring them
+
             MissingFieldFound = args =>
             {
-                // Use '?' to safely handle the potential null 'HeaderNames'
                 var headerName = args.HeaderNames?.FirstOrDefault() ?? "Unknown Column";
-                _logger.LogWarning("Missing field in CSV: {HeaderName} at index {Index}",  headerName, args.Index);
+                _logger.LogWarning(
+                    "Missing field in CSV: {HeaderName} at index {Index}",
+                    headerName,
+                    args.Index);
             },
+
             HeaderValidated = args =>
             {
                 if (args.InvalidHeaders.Any())
                 {
-                    _logger.LogError("Invalid CSV Headers detected.");
+                    _logger.LogError("Invalid CSV headers detected.");
                 }
             }
         };
     }
 
     /// <summary>
-    /// Loads all license records from the CSV file, caching them for subsequent calls.
-    /// If the cache is already populated, returns the cached list without re‑reading the file.
-    /// Skips the file existence check assuming it is created by the application or provided upfront.
+    /// Reads all license records from the CSV file.
+    /// If the file does not exist, returns an empty collection.
     /// </summary>
-    /// <returns>A list of all licenses.</returns>
+    /// <returns>A list of licenses read from the CSV file.</returns>
     public IEnumerable<License> GetAll()
     {
-        if (_cache != null) return _cache;
+        _logger.LogInformation("Loading licenses from {Path}", _filePath);
+
+        if (!File.Exists(_filePath))
+        {
+            _logger.LogWarning("CSV file not found. Returning empty collection.");
+            return Enumerable.Empty<License>();
+        }
 
         using var reader = new StreamReader(_filePath);
-        using var csv = new CsvReader(reader, _csvConfig); // Use the class-wide configuration
+        using var csv = new CsvReader(reader, _csvConfig);
 
-        // Register the mapping here so CsvReader knows how to bind columns to properties
         csv.Context.RegisterClassMap<LicenseMap>();
 
-        var records = csv.GetRecords<License>().ToList();
-        _cache = records;
-
-        return _cache;
+        return csv.GetRecords<License>().ToList();
     }
 
+    /// <summary>
+    /// Retrieves a license by its license number (case-insensitive search).
+    /// </summary>
+    /// <param name="licenseNumber">The license number to search for.</param>
+    /// <returns>The matching license if found; otherwise null.</returns>
     public License? GetByLicenseNumber(string licenseNumber)
     {
-        // Ensure the cache is populated before searching
         var licenses = GetAll();
 
-        // Perform a case-insensitive search on both fields
         return licenses.FirstOrDefault(e =>
-            e.LicenseNumber.Equals(licenseNumber, StringComparison.OrdinalIgnoreCase));
+            string.Equals(e.LicenseNumber, licenseNumber, StringComparison.OrdinalIgnoreCase));
     }
 }

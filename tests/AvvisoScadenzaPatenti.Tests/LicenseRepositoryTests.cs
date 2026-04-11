@@ -1,7 +1,7 @@
 namespace AvvisoScadenzaPatenti.Tests;
 
 using AvvisoScadenzaPatenti.Core.Interfaces;
-using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Entities;
 
 using FluentAssertions;
 
