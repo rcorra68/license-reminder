@@ -1,4 +1,4 @@
-namespace AvvisoScadenzaPatenti.Core.Services;
+namespace AvvisoScadenzaPatenti.Core.Shared;
 
 using System.Reflection;
 

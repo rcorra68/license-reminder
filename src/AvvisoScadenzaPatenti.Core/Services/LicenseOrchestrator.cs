@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
+using AvvisoScadenzaPatenti.Core.Shared;
 
 /// <summary>
 /// Coordinates the full license processing workflow.
