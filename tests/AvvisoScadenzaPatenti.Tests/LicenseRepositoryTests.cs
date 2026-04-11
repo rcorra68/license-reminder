@@ -43,8 +43,9 @@ public class LicenseRepositoryTests
         // Act
         var result = mockRepo.Object.GetByLicenseNumber("27815");
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Category.Should().Be("PRIMA CATEGORIA");
+        // Asserts result is not null AND continues the assertion on the object itself
+        result.Should().NotBeNull()
+            .And.Subject.As<License>()
+            .Category.Should().Be("PRIMA CATEGORIA");  
     }
 }
