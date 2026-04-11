@@ -11,12 +11,6 @@ using CommandLine;
 public class Options
 {
     /// <summary>
-    /// Encrypt and save this password into appsettings.json under Settings.MailServer.Password.
-    /// </summary>
-    [Option('c', "crypt", Required = false, HelpText = "Encrypt and save this password into appsettings.json under Settings.MailServer.Password.")]
-    public string? PasswordToCrypt { get; set; }
-
-    /// <summary>
     /// Initialize an empty appsettings.json file.
     /// </summary>
     [Option("init", Required = false, HelpText = "Initialize an empty appsettings.json file.")]

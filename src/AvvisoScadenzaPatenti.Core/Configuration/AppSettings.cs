@@ -1,8 +1,8 @@
 ﻿namespace AvvisoScadenzaPatenti.Core.Configuration;
 
-public record AppSettings
+public class AppSettings
 {
-    public List<string> MailBcc { get; init; } = new();
-    public string AdminEmail { get; init; } = string.Empty;
-    public MailServerSettings MailServer { get; init; } = new();
+    public string[] MailBcc { get; set; } = [];
+    public string AdminEmail { get; set; } = "";
+    public SmtpSettings Smtp { get; set; } = new();
 }

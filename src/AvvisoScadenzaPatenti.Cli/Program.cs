@@ -34,13 +34,6 @@ parserResult.WithParsed( opts =>
         return;
     }
 
-    // Check if the user wants to encrypt a password and save it to appsettings.json
-    if (!string.IsNullOrEmpty(opts.PasswordToCrypt))
-    {
-        EncryptAndSavePassword(opts.PasswordToCrypt);
-        return; // Exit the program after encryption, no further processing
-    }
-
     // Normal execution: run the orchestrator that processes licenses and employees
     RunOrchestrator(opts);
 });
@@ -56,7 +49,10 @@ parserResult.WithNotParsed(HandleParseErrors);
 /// <param name="opts">The parsed command‑line options.</param>
 void RunOrchestrator(Options opts)
 {
+    DotNetEnv.Env.Load();
+
     var builder = Host.CreateApplicationBuilder(args);
+    builder.Configuration.AddEnvironmentVariables();
 
     // Set up Serilog using the configuration from appsettings.json.
     Log.Logger = new LoggerConfiguration()
@@ -97,6 +93,7 @@ void ConfigureServices(HostApplicationBuilder builder, Options opts)
 {
     // Load the application settings section
     var settings = builder.Configuration.GetSection("Settings").Get<AppSettings>();
+    
     if (settings == null)
     {
         // The Settings section is required for the application to function correctly
@@ -145,48 +142,6 @@ void HandleParseErrors(IEnumerable<Error> errors)
     if (errors.Any(e => e.Tag != ErrorType.HelpRequestedError && e.Tag != ErrorType.VersionRequestedError))
     {
         Console.WriteLine("Invalid arguments provided. Use --help for usage information.");
-    }
-}
-
-/// <summary>
-/// Encrypts the given password using Base64 encoding and saves it into appsettings.json
-/// under the path "Settings.MailServer.Password".
-/// For real security, consider using ProtectedData or a dedicated secret‑handling library.
-/// </summary>
-/// <param name="plainPassword">The plain text password to encrypt and store.</param>
-void EncryptAndSavePassword(string plainPassword)
-{
-    // 1. Simple Base64 encoding (not cryptographically strong, just convenient)
-    byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(plainPassword);
-    string encryptedPassword = Convert.ToBase64String(textBytes);
-
-    string filePath = "appsettings.json";
-
-    try
-    {
-        // 2. Read the existing JSON file
-        string json = File.ReadAllText(filePath);
-        var jsonNode = JsonNode.Parse(json);
-
-        // 3. Update the specific path: Settings -> MailServer -> Password
-        if (jsonNode?["Settings"]?["MailServer"] is JsonObject mailServer)
-        {
-            mailServer["Password"] = encryptedPassword;
-
-            // 4. Write back to file with nice indentation
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(filePath, jsonNode.ToJsonString(options));
-
-            Console.WriteLine("Successfully encrypted and saved the password to appsettings.json.");
-        }
-        else
-        {
-            Console.WriteLine("Error: Could not find Settings.MailServer section in appsettings.json.");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error updating configuration: {ex.Message}");
     }
 }
 

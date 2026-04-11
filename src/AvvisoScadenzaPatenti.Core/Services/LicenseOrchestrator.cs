@@ -1,15 +1,18 @@
 namespace AvvisoScadenzaPatenti.Core.Services;
 
-using AvvisoScadenzaPatenti.Core.Entities;
-using AvvisoScadenzaPatenti.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
+using AvvisoScadenzaPatenti.Core.Entities;
+using AvvisoScadenzaPatenti.Core.Interfaces;
+using AvvisoScadenzaPatenti.Core.Models;
+
 /// <summary>
-/// Orchestrates the license processing workflow:
-/// - Loads licenses
-/// - Ensures employee existence
-/// - Evaluates expiration rules
-/// - Sends notifications
+/// Coordinates the full license processing workflow.
+/// Responsibilities include:
+/// - Loading licenses from repository
+/// - Resolving or creating employees
+/// - Evaluating expiration rules
+/// - Sending notifications for expired or expiring licenses
 /// </summary>
 public class LicenseOrchestrator
 {
@@ -20,7 +23,12 @@ public class LicenseOrchestrator
     private readonly ILogger<LicenseOrchestrator> _logger;
 
     /// <summary>
-    /// Represents a warning threshold rule for upcoming expirations.
+    /// Represents a warning threshold configuration for license expiration notifications.
+    /// Each threshold defines:
+    /// - number of days
+    /// - condition flag getter
+    /// - condition flag setter
+    /// - human-readable label
     /// </summary>
     private readonly record struct WarningThreshold(
         int Days,
@@ -43,30 +51,75 @@ public class LicenseOrchestrator
     }
 
     /// <summary>
-    /// Executes the full license processing pipeline.
+    /// Executes the complete license processing pipeline.
+    /// This includes loading data, evaluating expiration rules, and triggering notifications.
     /// </summary>
     public void ProcessLicenses()
     {
-        _logger.LogInformation(
-            "AvvisoScadenzaPatenti starting version {Version} ({Environment})", 
-            AppVersion.Get(), 
-            Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"));
+        var start = DateTime.UtcNow;
 
-        var licenses = _licenseRepo.GetAll();
+        int processed = 0;
+        int sent = 0;
+        int errors = 0;
 
-        foreach (var license in licenses)
+        try
         {
-            var employee = GetOrCreateEmployee(license.FirstName, license.LastName);
-            EvaluateExpiry(license, employee);
+            _logger.LogInformation(
+                "License processing started. Version {Version} | Environment {Environment}",
+                AppVersion.Get(),
+                Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"));
+
+            var licenses = _licenseRepo.GetAll();
+
+            foreach (var license in licenses)
+            {
+                processed++;
+
+                var employee = GetOrCreateEmployee(license.FirstName, license.LastName);
+
+                try
+                {
+                    bool emailSent = EvaluateExpiry(license, employee);
+                    if (emailSent)
+                        sent++;
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+
+                    _logger.LogError(ex,
+                        "Error processing license for {Email}",
+                        employee.Mail);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            errors++;
+            throw;
+        }
+        finally
+        {
+            var report = new DailyReport
+            {
+                ExecutionDate = DateTime.UtcNow,
+                ProcessedEmployees = processed,
+                EmailsSent = sent,
+                Errors = errors,
+                ExecutionTime = DateTime.UtcNow - start
+            };
+
+            _emailService.SendDailySummaryReport(report);
         }
 
         _logger.LogInformation("License processing completed successfully.");
     }
 
     /// <summary>
-    /// Retrieves an existing employee or creates a new one using either:
-    /// - compliant email generation
-    /// - or fallback from uncompliant list
+    /// Retrieves an existing employee or creates a new one if not found.
+    /// Email is resolved using either:
+    /// - compliant naming convention
+    /// - or fallback from uncompliant repository
     /// </summary>
     private Employee GetOrCreateEmployee(string firstName, string lastName)
     {
@@ -75,7 +128,7 @@ public class LicenseOrchestrator
         if (employee != null)
             return employee;
 
-        _logger.LogInformation("Creating employee record for {FirstName} {LastName}", firstName, lastName);
+        _logger.LogInformation("Creating new employee record for {FirstName} {LastName}", firstName, lastName);
 
         var uncompliant = _uncompliantRepo.GetByName(firstName, lastName);
         var email = ResolveEmail(firstName, lastName, uncompliant);
@@ -93,56 +146,49 @@ public class LicenseOrchestrator
     }
 
     /// <summary>
-    /// Evaluates expiration state of a license and triggers notifications.
+    /// Evaluates the expiration state of a license and triggers appropriate actions.
     /// </summary>
-    private void EvaluateExpiry(License license, Employee employee)
+    private bool EvaluateExpiry(License license, Employee employee)
     {
-        try
-        {
-            int daysToExpiration =
-                (license.ExpiryDate.Date - DateTime.UtcNow.Date).Days;
+        int daysToExpiration =
+            (license.ExpiryDate.Date - DateTime.UtcNow.Date).Days;
 
-            if (daysToExpiration < 0)
-                HandleExpired(license, employee, daysToExpiration);
-            else
-                HandleUpcomingExpiration(license, employee, daysToExpiration);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Error evaluating expiry for employee {Email}",
-                employee.Mail);
-        }
+        if (daysToExpiration < 0)
+            return HandleExpired(license, employee, daysToExpiration);
+
+        return HandleUpcomingExpiration(license, employee, daysToExpiration);
     }
 
     /// <summary>
-    /// Handles licenses that are already expired.
+    /// Handles expired licenses.
     /// Sends:
-    /// - daily notifications for first 3 days
-    /// - then every 14 days thereafter
+    /// - daily reminders for the first 3 days after expiration
+    /// - periodic reminders every 14 days afterwards
     /// </summary>
-    private void HandleExpired(License license, Employee employee, int days)
+    private bool HandleExpired(License license, Employee employee, int days)
     {
         int daysSinceExpiration = Math.Abs(days);
 
-        // First 3 days after expiration: daily reminders
         if (daysSinceExpiration is >= 1 and <= 3)
         {
             SendExpiredMail(employee, license, "Daily expired notice");
-            return;
+            return true;
         }
 
-        // Every 14 days after the first 3 days
         if (daysSinceExpiration > 3 && (daysSinceExpiration - 3) % 14 == 0)
         {
             SendExpiredMail(employee, license, "Periodic expired notice");
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>
-    /// Handles upcoming expirations using predefined warning thresholds.
+    /// Handles upcoming license expirations using predefined warning thresholds.
+    /// Ensures notifications are sent only once per threshold.
     /// </summary>
-    private void HandleUpcomingExpiration(License license, Employee employee, int days)
+    private bool HandleUpcomingExpiration(License license, Employee employee, int days)
     {
         var thresholds = new[]
         {
@@ -158,7 +204,7 @@ public class LicenseOrchestrator
         if (active == default)
         {
             ResetWarningsIfNeeded(employee);
-            return;
+            return false;
         }
 
         if (!active.GetFlag(employee))
@@ -171,11 +217,15 @@ public class LicenseOrchestrator
 
             _emailService.SendExpirationNotice(employee, license, isExpired: false);
             _employeeRepo.Update(employee);
+
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>
-    /// Resets all warning flags if needed.
+    /// Resets all warning flags when no active thresholds apply.
     /// </summary>
     private void ResetWarningsIfNeeded(Employee employee)
     {
@@ -189,7 +239,8 @@ public class LicenseOrchestrator
     }
 
     /// <summary>
-    /// Builds an email address for a new employee.
+    /// Resolves the email address for a new employee.
+    /// Uses uncompliant repository fallback if available.
     /// </summary>
     private string ResolveEmail(string firstName, string lastName, UncompliantMail? uncompliant)
     {
@@ -198,7 +249,7 @@ public class LicenseOrchestrator
     }
 
     /// <summary>
-    /// Sends an expired license notification email.
+    /// Sends an email notification for expired licenses.
     /// </summary>
     private void SendExpiredMail(Employee employee, License license, string reason)
     {
