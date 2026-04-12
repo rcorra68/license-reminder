@@ -10,4 +10,4 @@ Benvenuto nella documentazione del progetto.
 
 ## 📚 Sezioni
 
-- [API Reference](api/)
+- [API Reference](api/index.md)
