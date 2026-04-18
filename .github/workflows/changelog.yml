@@ -1,0 +1,24 @@
+name: Update Changelog
+on:
+  push:
+    branches: [ main, develop ]
+jobs:
+  cliff:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Importante per storia completa
+    - name: Install git-cliff
+      run: curl -sSL https://github.com/orhun/git-cliff/releases/latest/download/git-cliff-x86_64-apple-darwin.tar.gz | tar zx -C /usr/local/bin
+    - name: Generate changelog
+      run: git cliff --output CHANGELOG.md
+    - name: Commit changelog
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add CHANGELOG.md
+        git diff --staged --quiet || git commit -m "docs: update CHANGELOG"
+        git push

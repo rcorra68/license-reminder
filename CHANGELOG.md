@@ -1,8 +1,35 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- Add GitHub Actions workflow for automated DocFX deployment
+
+### 🐛 Bug Fixes
+
+- *(security)* Upgrade MailKit to 4.16.0 to patch CVE-2026-30227
+
+### 🚜 Refactor
+
+- Improve orchestration metrics and SMTP configuration handling
+- Relocate AppVersion from Core.Service to Core.Shared to avoid misuse of service layer
+- Convert Program.cs to explicit class to support XML documentation
+- Add XML summary and English comments to MailKitEmailService; extract IEmailService interface
+
+### 📚 Documentation
+
+- Delete unsafe data
+- Configure base URL for GitHub Pages deployment
+- Fix invalid API link in index.md and verify TOC structure
+- Add DocFx documentation with API reference and index pages
+- Create docfx.yml action
+- Staged docfx.yml action
+- Modified CHANGELOG.md
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(build)* Add MinVer + Git commit hash to assembly informational version
+- *(ci)* Introduce GitHub Actions pipeline for .NET build, test and versioning (MinVer + full git history)
+- Initialize DocFX configuration and metadata mapping
 ## [3.1.0] - 2026-04-11
 
 ### 🚀 Features

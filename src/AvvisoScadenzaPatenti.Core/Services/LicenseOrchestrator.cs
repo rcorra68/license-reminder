@@ -55,7 +55,7 @@ public class LicenseOrchestrator
     /// Executes the complete license processing pipeline.
     /// This includes loading data, evaluating expiration rules, and triggering notifications.
     /// </summary>
-    public void ProcessLicenses()
+    public async Task ProcessLicensesAsync(CancellationToken ct = default)
     {
         var start = DateTime.UtcNow;
 
@@ -74,13 +74,15 @@ public class LicenseOrchestrator
 
             foreach (var license in licenses)
             {
+                ct.ThrowIfCancellationRequested();
+
                 processed++;
 
                 var employee = GetOrCreateEmployee(license.FirstName, license.LastName);
 
                 try
                 {
-                    bool emailSent = EvaluateExpiry(license, employee);
+                    bool emailSent = await EvaluateExpiryAsync(license, employee, ct);
                     if (emailSent)
                         sent++;
                 }
@@ -110,7 +112,7 @@ public class LicenseOrchestrator
                 ExecutionTime = DateTime.UtcNow - start
             };
 
-            _emailService.SendDailySummaryReport(report);
+            await _emailService.SendDailySummaryReportAsync(report, ct);
         }
 
         _logger.LogInformation("License processing completed successfully.");
@@ -149,15 +151,15 @@ public class LicenseOrchestrator
     /// <summary>
     /// Evaluates the expiration state of a license and triggers appropriate actions.
     /// </summary>
-    private bool EvaluateExpiry(License license, Employee employee)
+    private Task<bool> EvaluateExpiryAsync(License license, Employee employee, CancellationToken ct)
     {
         int daysToExpiration =
             (license.ExpiryDate.Date - DateTime.UtcNow.Date).Days;
 
         if (daysToExpiration < 0)
-            return HandleExpired(license, employee, daysToExpiration);
+            return HandleExpiredAsync(license, employee, daysToExpiration, ct);
 
-        return HandleUpcomingExpiration(license, employee, daysToExpiration);
+        return HandleUpcomingExpirationAsync(license, employee, daysToExpiration, ct);
     }
 
     /// <summary>
@@ -166,19 +168,19 @@ public class LicenseOrchestrator
     /// - daily reminders for the first 3 days after expiration
     /// - periodic reminders every 14 days afterwards
     /// </summary>
-    private bool HandleExpired(License license, Employee employee, int days)
+    private async Task<bool> HandleExpiredAsync(License license, Employee employee, int days, CancellationToken ct)
     {
         int daysSinceExpiration = Math.Abs(days);
 
         if (daysSinceExpiration is >= 1 and <= 3)
         {
-            SendExpiredMail(employee, license, "Daily expired notice");
+            await SendExpiredMailAsync(employee, license, "Daily expired notice", ct);
             return true;
         }
 
         if (daysSinceExpiration > 3 && (daysSinceExpiration - 3) % 14 == 0)
         {
-            SendExpiredMail(employee, license, "Periodic expired notice");
+            await SendExpiredMailAsync(employee, license, "Periodic expired notice", ct);
             return true;
         }
 
@@ -189,7 +191,7 @@ public class LicenseOrchestrator
     /// Handles upcoming license expirations using predefined warning thresholds.
     /// Ensures notifications are sent only once per threshold.
     /// </summary>
-    private bool HandleUpcomingExpiration(License license, Employee employee, int days)
+    private async Task<bool> HandleUpcomingExpirationAsync(License license, Employee employee, int days, CancellationToken ct)
     {
         var thresholds = new[]
         {
@@ -216,7 +218,12 @@ public class LicenseOrchestrator
 
             active.SetFlag(employee, true);
 
-            _emailService.SendExpirationNotice(employee, license, isExpired: false);
+            await _emailService.SendExpirationNoticeAsync(
+                employee,
+                license,
+                isExpired: false,
+                ct);
+
             _employeeRepo.Update(employee);
 
             return true;
@@ -252,9 +259,9 @@ public class LicenseOrchestrator
     /// <summary>
     /// Sends an email notification for expired licenses.
     /// </summary>
-    private void SendExpiredMail(Employee employee, License license, string reason)
+    private async Task SendExpiredMailAsync(Employee employee, License license, string reason, CancellationToken ct)
     {
-        _emailService.SendExpirationNotice(employee, license, isExpired: true);
+        await _emailService.SendExpirationNoticeAsync(employee, license, isExpired: true, ct);
 
         _logger.LogInformation("{Reason} sent to {Email}", reason, employee.Mail);
     }

@@ -32,12 +32,14 @@ The project follows **Clean Architecture** principles and **SOLID** patterns, or
 ## ⚙️ Installation & Setup
 
 1. **Clone the repository**:
+
 ```bash
 git clone [https://github.com/rcorra68/license-reminder.git](https://github.com/rcorra68/license-reminder.git)
 cd license-reminder
 ```
 
 2. **Restore dependencies**:
+
 ```bash
 dotnet restore
 ```
@@ -48,19 +50,19 @@ Update `src/AvvisoScadenzaPatenti.Cli/appsettings.json` with your SMTP settings 
 
 ## 🚀 Usage
 
-### Run the application:
+### Run the application
 
 ```bash
 dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj
 ```
 
-### Encrypt a password:
+### Encrypt a password
 
 ```bash
 dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --crypt "your_password"
 ```
 
-### Show help:
+### Show help
 
 ```bash
 dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --help
@@ -74,11 +76,31 @@ To execute the unit test suite:
 dotnet test
 ```
 
+## 🔐 Security & Configuration
+
+This project supports two ways to manage sensitive information (like SMTP passwords), depending on the environment.
+
+### 1. Local Development (Windows / macOS)
+
+We use the native **.NET Secret Manager** to keep credentials out of the source code. This is the preferred method for local development.
+
+To set up your local secrets:
+
+```bash
+# Initialize secrets for the project
+dotnet user-secrets init --project src/AvvisoScadenzaPatenti.Cli/
+
+# Set your SMTP credentials
+dotnet user-secrets set "Settings:Smtp:Username" "your_email@example.com"
+dotnet user-secrets set "Settings:Smtp:Password" "your_secure_password"
+```
+
 ## 🗺️ Roadmap
+
 - [ ] Implement xUnit & Moq test suite for Orchestrator logic.
-- [ ] Upgrade Base64 encryption to .NET Data Protection API for enhanced security.
 - [ ] Add support for Excel (.xlsx) data sources.
 
 ## Documentation
+
 The complete API reference and architectural guides are available at:
 [https://rcorra68.github.io/license-reminder/](https://rcorra68.github.io/license-reminder/)

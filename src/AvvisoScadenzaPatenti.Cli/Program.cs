@@ -6,6 +6,7 @@ using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Services;
 using AvvisoScadenzaPatenti.Infrastructure.Repositories;
+using AvvisoScadenzaPatenti.Infrastructure.Services;
 using AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 
 using CommandLine;
@@ -17,43 +18,50 @@ using Microsoft.Extensions.Logging;
 
 using Serilog;
 
-/// <summary>
-/// Entry point class for the License Expiration Notification CLI tool.
-/// </summary>
 public class Program
 {
-    /// <summary>
-    /// Main entry point of the application.
-    /// </summary>
-    /// <param name="args">Command-line arguments.</param>
-    public static void Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
-        var parserResult = Parser.Default.ParseArguments<Options>(args);
-
-        parserResult.WithParsed(opts =>
-        {
-            if (opts.Init)
-            {
-                InitializeConfiguration(opts.Force);
-                return;
-            }
-
-            RunOrchestrator(opts, args);
-        });
-
-        parserResult.WithNotParsed(HandleParseErrors);
+        return await Parser.Default.ParseArguments<Options>(args)
+            .MapResult(
+                async opts => await WithParsedAsync(opts, args),
+                errs => Task.FromResult(HandleParseErrors(errs))
+            );
     }
 
-    /// <summary>
-    /// Builds the host and runs the LicenseOrchestrator using the parsed options.
-    /// </summary>
-    /// <param name="opts">The parsed command‑line options.</param>
-    /// <param name="args">Original command-line arguments for the host builder.</param>
-    public static void RunOrchestrator(Options opts, string[] args)
+    private static async Task<int> WithParsedAsync(Options opts, string[] args)
+    {
+        if (opts.Init)
+        {
+            InitializeConfiguration(opts.Force);
+            return 0;
+        }
+
+        using var host = BuildHost(args, opts);
+
+        var emailService = host.Services.GetRequiredService<IEmailService>();
+        var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
+
+        // CancellationToken con timeout (best practice per cron job)
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var ct = cts.Token;
+
+        if (!await emailService.VerifyEmailConnectivityAsync(ct))
+        {
+            Log.Warning("SMTP Health Check failed. Licenses will be processed, but notifications might not be delivered.");
+        }
+
+        await orchestrator.ProcessLicensesAsync(ct);
+
+        return 0;
+    }
+    
+    private static IHost BuildHost(string[] args, Options opts)
     {
         DotNetEnv.Env.Load();
 
         var builder = Host.CreateApplicationBuilder(args);
+
         builder.Configuration.AddEnvironmentVariables();
 
         Log.Logger = new LoggerConfiguration()
@@ -65,33 +73,18 @@ public class Program
 
         ConfigureServices(builder, opts);
 
-        using IHost host = builder.Build();
-
-        var emailService = host.Services.GetRequiredService<IEmailService>();
-        var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
-
-        if (!emailService.VerifyEmailConnectivity())
-        {
-            Log.Warning("SMTP Health Check failed. Licenses will be processed, but notifications might not be delivered.");
-            return;
-        }
-
-        orchestrator.ProcessLicenses();
+        return builder.Build();
     }
 
-    /// <summary>
-    /// Configures the services (DI container) for the host, including repositories and orchestrator.
-    /// </summary>
-    /// <param name="builder">The host application builder.</param>
-    /// <param name="opts">The parsed command‑line options.</param>
     private static void ConfigureServices(HostApplicationBuilder builder, Options opts)
     {
-        var settings = builder.Configuration.GetSection("Settings").Get<AppSettings>();
-        
-        if (settings == null)
-            throw new InvalidOperationException("Critical Error: 'Settings' section not found in appsettings.json");
+        // Options pattern (clean & standard)
+        builder.Services
+            .AddOptions<AppSettings>()
+            .Bind(builder.Configuration.GetSection("Settings"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
-        builder.Services.AddSingleton(settings);
         var dataSources = builder.Configuration.GetSection("DataSources");
 
         builder.Services.AddSingleton<IEmployeeRepository>(sp =>
@@ -110,44 +103,61 @@ public class Program
                 sp.GetRequiredService<ILogger<UncompliantMailRepository>>()));
 
         builder.Services.AddSingleton(opts);
+
         builder.Services.AddTransient<IEmailService, MailKitEmailService>();
         builder.Services.AddTransient<LicenseOrchestrator>();
+
+        // Infrastructure services
+        builder.Services.AddSingleton<IConfigService, JsonConfigService>();
     }
 
-    /// <summary>
-    /// Handles command‑line parsing errors.
-    /// </summary>
-    /// <param name="errors">Sequence of parsing errors.</param>
-    private static void HandleParseErrors(IEnumerable<Error> errors)
+    private static int HandleParseErrors(IEnumerable<Error> errors)
     {
         if (errors.Any(e => e.Tag != ErrorType.HelpRequestedError && e.Tag != ErrorType.VersionRequestedError))
         {
             Console.WriteLine("Invalid arguments provided. Use --help for usage information.");
+            return 1;
         }
+
+        return 0;
     }
 
-    /// <summary>
-    /// Creates a default appsettings.json if it doesn't exist.
-    /// </summary>
-    /// <param name="force">If true, overwrites existing configuration.</param>
     private static void InitializeConfiguration(bool force)
     {
-        string filePath = "appsettings.json";
+        const string filePath = "appsettings.json";
+
         if (File.Exists(filePath) && !force)
         {
             Console.WriteLine("Configuration file already exists. Use --force to overwrite.");
             return;
         }
 
-        var defaultConfig = new { 
-            /* ... il tuo oggetto config ... */ 
+        var defaultConfig = new
+        {
+            Settings = new
+            {
+                Smtp = new
+                {
+                    Host = "smtp.example.com",
+                    Port = 587,
+                    Username = "user@example.com",
+                    Password = ""
+                }
+            },
+            DataSources = new
+            {
+                EmployeesFilePath = "employees.csv",
+                LicensesFilePath = "licenses.csv",
+                UncompliantMailsFilePath = "uncompliant_mails.csv"
+            }
         };
 
         try
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
-            string json = JsonSerializer.Serialize(defaultConfig, options);
+            var json = JsonSerializer.Serialize(defaultConfig, options);
             File.WriteAllText(filePath, json);
+
             Console.WriteLine("Successfully initialized appsettings.json.");
         }
         catch (Exception ex)
