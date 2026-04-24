@@ -1,18 +1,28 @@
 <Project>
+
   <PropertyGroup>
 
-    <!-- MinVer configuration -->
-    <MinVerTagPrefix>v</MinVerTagPrefix>
-
-    <!-- Version exposed to runtime -->
-    <AssemblyInformationalVersion>
-      $(MinVerVersion)+$(GitCommitHash)
-    </AssemblyInformationalVersion>
+    <!-- ========================= -->
+    <!-- VERSIONING (git-cliff driven) -->
+    <!-- ========================= -->
 
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+
+    <!-- Runtime version info -->
+    <AssemblyInformationalVersion>
+      $(VersionPrefix)+$(GitCommitHash)
+    </AssemblyInformationalVersion>
+
+    <!-- Nullable + modern .NET defaults -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
   </PropertyGroup>
 
-  <!-- Capture git commit -->
+  <!-- ========================= -->
+  <!-- GIT COMMIT HASH -->
+  <!-- ========================= -->
+
   <Target Name="GetGitCommitHash" BeforeTargets="GenerateAssemblyInfo">
     <Exec Command="git rev-parse --short HEAD"
           ConsoleToMSBuild="true">
@@ -20,10 +30,4 @@
     </Exec>
   </Target>
 
-  <ItemGroup>
-    <PackageReference Include="MinVer" Version="6.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
 </Project>
