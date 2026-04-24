@@ -1,11 +1,13 @@
 namespace AvvisoScadenzaPatenti.Core.Services;
 
-using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
 using AvvisoScadenzaPatenti.Core.Shared;
+
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Coordinates the full license processing workflow.
@@ -65,10 +67,13 @@ public class LicenseOrchestrator
 
         try
         {
+            var version =
+                Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+            
             _logger.LogInformation(
-                "License processing started. Version {Version} | Environment {Environment}",
-                AppVersion.Get(),
-                Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"));
+                "Starting License Reminder v{Version}", version);
 
             var licenses = _licenseRepo.GetAll();
 
