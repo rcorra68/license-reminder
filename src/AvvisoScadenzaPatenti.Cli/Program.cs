@@ -58,11 +58,14 @@ public class Program
     
     private static IHost BuildHost(string[] args, Options opts)
     {
-        DotNetEnv.Env.Load();
-
         var builder = Host.CreateApplicationBuilder(args);
 
-        builder.Configuration.AddEnvironmentVariables();
+        var environment =
+            Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? "Production";
+
+        builder.Environment.EnvironmentName = environment;
 
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration)

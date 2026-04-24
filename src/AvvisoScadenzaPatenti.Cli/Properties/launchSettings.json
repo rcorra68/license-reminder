@@ -1,7 +1,10 @@
 {
   "profiles": {
     "avviso-scadenza-patenti": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
     }
   }
 }

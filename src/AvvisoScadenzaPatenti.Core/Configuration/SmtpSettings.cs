@@ -14,6 +14,13 @@ public class SmtpSettings
     public string Username { get; set; } = "";
     
     public string Password { get; set; } = "";
-    
-    public SmtpSecurityMode SecurityMode { get; set; } = SmtpSecurityMode.StartTls;
+
+    // Proprietà calcolata: la logica di sicurezza è centralizzata qui
+    public SmtpSecurityMode SecurityMode => this.Port switch
+    {
+        465 => SmtpSecurityMode.SslOnConnect,
+        587 => SmtpSecurityMode.StartTls,
+        25 or 1025 => SmtpSecurityMode.None,
+        _ => SmtpSecurityMode.Auto
+    };
 }

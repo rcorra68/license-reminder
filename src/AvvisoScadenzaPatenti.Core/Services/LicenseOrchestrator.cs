@@ -78,11 +78,11 @@ public class LicenseOrchestrator
 
                 processed++;
 
-                var employee = GetOrCreateEmployee(license.FirstName, license.LastName);
+                var employee = this.GetOrCreateEmployee(license.FirstName, license.LastName);
 
                 try
                 {
-                    bool emailSent = await EvaluateExpiryAsync(license, employee, ct);
+                    bool emailSent = await this.EvaluateExpiryAsync(license, employee, ct);
                     if (emailSent)
                         sent++;
                 }
@@ -157,9 +157,9 @@ public class LicenseOrchestrator
             (license.ExpiryDate.Date - DateTime.UtcNow.Date).Days;
 
         if (daysToExpiration < 0)
-            return HandleExpiredAsync(license, employee, daysToExpiration, ct);
+            return this.HandleExpiredAsync(license, employee, daysToExpiration, ct);
 
-        return HandleUpcomingExpirationAsync(license, employee, daysToExpiration, ct);
+        return this.HandleUpcomingExpirationAsync(license, employee, daysToExpiration, ct);
     }
 
     /// <summary>
@@ -174,13 +174,13 @@ public class LicenseOrchestrator
 
         if (daysSinceExpiration is >= 1 and <= 3)
         {
-            await SendExpiredMailAsync(employee, license, "Daily expired notice", ct);
+            await this.SendExpiredMailAsync(employee, license, "Daily expired notice", ct);
             return true;
         }
 
         if (daysSinceExpiration > 3 && (daysSinceExpiration - 3) % 14 == 0)
         {
-            await SendExpiredMailAsync(employee, license, "Periodic expired notice", ct);
+            await this.SendExpiredMailAsync(employee, license, "Periodic expired notice", ct);
             return true;
         }
 
@@ -206,7 +206,7 @@ public class LicenseOrchestrator
 
         if (active == default)
         {
-            ResetWarningsIfNeeded(employee);
+            this.ResetWarningsIfNeeded(employee);
             return false;
         }
 
