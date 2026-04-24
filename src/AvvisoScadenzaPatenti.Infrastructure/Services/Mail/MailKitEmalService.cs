@@ -65,9 +65,9 @@ public class MailKitEmailService : IEmailService
             return;
         }
 
-        var message = CreateLicenseMessage(employee, license, isExpired);
+        var message = this.CreateLicenseMessage(employee, license, isExpired);
 
-        await SendAsync(message, ct);
+        await this.SendAsync(message, ct);
 
         _logger.LogInformation(
             "Expiration email sent to {Email} for license {LicenseId}",
@@ -86,7 +86,7 @@ public class MailKitEmailService : IEmailService
 
         try
         {
-            await SendAsync(message, ct);
+            await this.SendAsync(message, ct);
             _logger.LogInformation("SMTP health check succeeded for host {Host}", _settings.Smtp.Host);
             return true;
         }
@@ -112,9 +112,9 @@ public class MailKitEmailService : IEmailService
             return;
         }
 
-        var message = CreateDailyReportMessage(report);
+        var message = this.CreateDailyReportMessage(report);
 
-        await SendAsync(message, ct);
+        await this.SendAsync(message, ct);
 
         _logger.LogInformation("Daily report sent to {AdminEmail}", _settings.AdminEmail);
     }
@@ -133,7 +133,7 @@ public class MailKitEmailService : IEmailService
         {
             ct.ThrowIfCancellationRequested();
 
-            await ConnectAsync(client, ct);
+            await this.ConnectAsync(client, ct);
 
             ct.ThrowIfCancellationRequested();
 
@@ -193,27 +193,26 @@ public class MailKitEmailService : IEmailService
     {
         var message = new MimeMessage();
 
-        message.From.Add(new MailboxAddress("Gestione Patenti", "noreply@vigilfuoco.it"));
+        message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
         message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
 
-        AddBcc(message);
+        this.AddBcc(message);
 
         message.Subject = isExpired
             ? $"⚠ Patente SCADUTA - {employee.LastName} {employee.FirstName}"
             : $"Promemoria scadenza patente - {employee.LastName} {employee.FirstName}";
 
         var body = isExpired
-            ? "<b>La tua patente è SCADUTA</b>"
-            : $"Patente {license.Category} in scadenza il <b>{license.ExpiryDate:dd/MM/yyyy}</b>";
+            ? "La tua patente è <b>SCADUTA</b>"
+            : $"La tua patente di <b>{license.Category}</b> scadrà il/l' <b>{license.ExpiryDate:dd/MM/yyyy}</b>.";
 
         message.Body = new BodyBuilder
         {
             HtmlBody = $@"
-                <h3>Avviso Scadenza</h3>
                 <p>Ciao {employee.FirstName} {employee.LastName},</p>
                 <p>{body}</p>
-                <br/>
-                <small>Email automatica - non rispondere</small>"
+                <p>Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.</p>
+                <p><small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small></p>"
         }.ToMessageBody();
 
         return message;
@@ -226,7 +225,7 @@ public class MailKitEmailService : IEmailService
     {
         var message = new MimeMessage();
 
-        message.From.Add(new MailboxAddress("License System", "noreply@vigilfuoco.it"));
+        message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
         message.To.Add(MailboxAddress.Parse(_settings.AdminEmail));
 
         message.Subject = $"Report giornaliero - {report.ExecutionDate:yyyy-MM-dd}";
@@ -234,7 +233,6 @@ public class MailKitEmailService : IEmailService
         message.Body = new BodyBuilder
         {
             HtmlBody = $@"
-                <h2>Report giornaliero</h2>
                 <ul>
                     <li>Employee: {report.ProcessedEmployees}</li>
                     <li>Email: {report.EmailsSent}</li>
@@ -253,7 +251,7 @@ public class MailKitEmailService : IEmailService
     {
         var message = new MimeMessage();
 
-        message.From.Add(new MailboxAddress("System", "noreply@vigilfuoco.it"));
+        message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
         message.To.Add(MailboxAddress.Parse(_settings.AdminEmail ?? "admin@test.local"));
 
         message.Subject = "SMTP Health Check";
