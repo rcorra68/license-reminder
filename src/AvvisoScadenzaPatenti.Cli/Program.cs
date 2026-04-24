@@ -55,7 +55,7 @@ public class Program
 
         return 0;
     }
-    
+
     private static IHost BuildHost(string[] args, Options opts)
     {
         var builder = Host.CreateApplicationBuilder(args);

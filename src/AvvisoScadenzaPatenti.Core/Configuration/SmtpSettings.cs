@@ -7,12 +7,12 @@ public class SmtpSettings
 {
     [Required]
     public string Host { get; set; } = "";
-    
+
     [Range(1, 65535)]
     public int Port { get; set; } = 587;
-    
+
     public string Username { get; set; } = "";
-    
+
     public string Password { get; set; } = "";
 
     // Proprietà calcolata: la logica di sicurezza è centralizzata qui

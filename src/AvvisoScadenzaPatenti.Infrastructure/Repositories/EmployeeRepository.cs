@@ -115,8 +115,8 @@ public class EmployeeRepository : IEmployeeRepository
         var employees = GetAll();
 
         // Perform a case-insensitive search on both fields
-        return employees.FirstOrDefault(e => 
-            e.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase) && 
+        return employees.FirstOrDefault(e =>
+            e.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase) &&
             e.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -174,7 +174,7 @@ public class EmployeeRepository : IEmployeeRepository
             _cache[index] = employee;
 
             _logger.LogDebug("Updated employee {Email} in memory cache.", employee.Mail);
-            
+
             // Persist the updated list to the CSV file
             SaveChanges();
         }
@@ -192,7 +192,7 @@ public class EmployeeRepository : IEmployeeRepository
     /// </summary>
     private void SaveChanges()
     {
-        try 
+        try
         {
             using var writer = new StreamWriter(_filePath);
             using var csv = new CsvWriter(writer, _csvConfig);
@@ -201,7 +201,7 @@ public class EmployeeRepository : IEmployeeRepository
             csv.Context.RegisterClassMap<EmployeeMap>();
 
             // Now the compiler knows _cache is not null because of the check above
-            csv.WriteRecords(_cache); 
+            csv.WriteRecords(_cache);
         }
         catch (Exception ex)
         {

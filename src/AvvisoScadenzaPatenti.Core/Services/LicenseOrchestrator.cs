@@ -71,7 +71,7 @@ public class LicenseOrchestrator
                 Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
                 .InformationalVersion;
-            
+
             _logger.LogInformation(
                 "Starting License Reminder v{Version}", version);
 
