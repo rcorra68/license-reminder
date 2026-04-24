@@ -4,5 +4,6 @@ public enum SmtpSecurityMode
 {
     None,
     StartTls,
-    SslOnConnect
+    SslOnConnect,
+    Auto
 }
