@@ -4,6 +4,10 @@
 
 - *(api)* Add user endpoint
 
+### 📚 Documentation
+
+- Update CHANGELOG
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(workflow)* Update release pipeline configuration
@@ -14,6 +18,7 @@
 - Updated Directory.Build.props to remove MinVer
 - Remove DocFX and related documentation artifacts
 - *(ci)* Correct git-cliff installation for linux runner
+- *(release)* Remove deprecated release script (migrated to GitHub Actions)
 ## [3.3.1] - 2026-04-24
 
 ### ⚙️ Miscellaneous Tasks
