@@ -2,18 +2,49 @@
 
 ### 🚀 Features
 
+- *(api)* Add user endpoint
+
+### ⚙️ Miscellaneous Tasks
+
+- *(workflow)* Update release pipeline configuration
+- *(workflow)* Fix dotnet command in release pipeline
+- *(format)* Apply dotnet format to project
+- Move release.sh to script/ folder
+- Remove scripts/pre-push file
+- Updated Directory.Build.props to remove MinVer
+- Remove DocFX and related documentation artifacts
+- *(ci)* Correct git-cliff installation for linux runner
+## [3.3.1] - 2026-04-24
+
+### ⚙️ Miscellaneous Tasks
+
+- Add version logging to Serilog startup
+## [3.3.0] - 2026-04-24
+
+### 🚜 Refactor
+
+- Automate SMTP security mode selection
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove dotnetenv dependency and migrate to native .NET configuration
+## [3.2.1] - 2026-04-23
+
+### ⚙️ Miscellaneous Tasks
+
+- Add GitHub Actions workflow for automated releases
+## [3.2.0] - 2026-04-18
+
+### 🚀 Features
+
 - Add GitHub Actions workflow for automated DocFX deployment
-
-### 🐛 Bug Fixes
-
-- *(security)* Upgrade MailKit to 4.16.0 to patch CVE-2026-30227
 
 ### 🚜 Refactor
 
 - Improve orchestration metrics and SMTP configuration handling
 - Relocate AppVersion from Core.Service to Core.Shared to avoid misuse of service layer
 - Convert Program.cs to explicit class to support XML documentation
-- Add XML summary and English comments to MailKitEmailService; extract IEmailService interface
+- *(email)* Async email pipeline and cleanup
 
 ### 📚 Documentation
 
@@ -23,7 +54,6 @@
 - Add DocFx documentation with API reference and index pages
 - Create docfx.yml action
 - Staged docfx.yml action
-- Modified CHANGELOG.md
 
 ### ⚙️ Miscellaneous Tasks
 
