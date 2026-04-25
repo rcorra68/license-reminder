@@ -93,14 +93,6 @@ dotnet user-secrets init --project src/AvvisoScadenzaPatenti.Cli/
 # Set your SMTP credentials
 dotnet user-secrets set "Settings:Smtp:Username" "your_email@example.com"
 dotnet user-secrets set "Settings:Smtp:Password" "your_secure_password"
+dotnet user-secrets set "Settings:Smtp:Host" "your.domain.com"
+dotnet user-secrets set "Settings:AdminEmail" "admin_email@example.com"
 ```
-
-## 🗺️ Roadmap
-
-- [ ] Implement xUnit & Moq test suite for Orchestrator logic.
-- [ ] Add support for Excel (.xlsx) data sources.
-
-## Documentation
-
-The complete API reference and architectural guides are available at:
-[https://rcorra68.github.io/license-reminder/](https://rcorra68.github.io/license-reminder/)
