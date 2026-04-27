@@ -1,0 +1,41 @@
+{
+  "name": "avviso-scadenza-patenti",
+  "version": "1.0.0",
+  "description": "> A lightweight .NET tool to convert custom CSV contact lists into Yealink expansion module configuration files (.cfg).",
+  "main": "commitlint.config.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "dotnet test || echo 'No tests found'",
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rcorra68/csv-to-yealink-cfg.git"
+  },
+  "lint-staged": {
+    "*.{js,ts,json,md}": [
+      "prettier --write"
+    ],
+    "*.cs": [
+      "dotnet format --include"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rcorra68/csv-to-yealink-cfg/issues"
+  },
+  "homepage": "https://github.com/rcorra68/csv-to-yealink-cfg#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.2",
+    "@commitlint/config-conventional": "^20.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3"
+  }
+}
