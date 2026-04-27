@@ -3,6 +3,11 @@
 ### 💼 Other
 
 - Optimize dev workflow and relax commitlint rules
+- Implement automated release workflow with git-cliff and husky
+
+### 📚 Documentation
+
+- Update CHANGELOG
 ## [3.4.0] - 2026-04-25
 
 ### 🚀 Features
