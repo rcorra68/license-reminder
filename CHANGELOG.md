@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### 💼 Other
+
+- Optimize dev workflow and relax commitlint rules
+## [3.4.0] - 2026-04-25
+
 ### 🚀 Features
 
 - *(api)* Add user endpoint
@@ -7,6 +12,7 @@
 ### 📚 Documentation
 
 - Update CHANGELOG
+- Update CHANGELOG for v3.4.0
 
 ### ⚙️ Miscellaneous Tasks
 
