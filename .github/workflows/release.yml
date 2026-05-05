@@ -25,7 +25,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      # 🧠 VERSIONING DA GIT TAG (SENZA TOOL ESTERNI)
       - name: Compute version
         id: version
         run: |
@@ -39,44 +38,39 @@ jobs:
 
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      # 🌿 CREA RELEASE BRANCH
       - name: Create release branch
         run: |
           git checkout -b release/${{ steps.version.outputs.version }}
           git push origin release/${{ steps.version.outputs.version }}
 
-      # 📝 BUILD + VALIDAZIONE RELEASE
       - name: Build release
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
           dotnet test --configuration Release --no-build
 
-      # 📦 (OPZIONALE) PACK NUGET
       - name: Pack (if needed)
         run: |
           dotnet pack --configuration Release --no-build --output ./artifacts
 
-      # 🔀 PR AUTOMATICA VERSO MAIN
       - name: Create PR to main
         run: |
+          BODY="🚀 Automatic Release
+
+Version: ${{ steps.version.outputs.version }}
+
+✔ Build passed  
+✔ Tests passed  
+✔ Ready for production review"
+
           gh pr create \
             --base main \
             --head release/${{ steps.version.outputs.version }} \
             --title "Release ${{ steps.version.outputs.version }}" \
-            --body "$(cat <<EOF
-        🚀 Automatic Release
-
-      Version: ${{ steps.version.outputs.version }}
-
-      ✔ Build passed  
-      ✔ Tests passed  
-      ✔ Ready for production review
-      EOF
-      )"
+            --body "$BODY"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
-      # 🌐 PREVIEW TAG (OPTIONALE)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Tag preview
         run: |
           echo "Preview ready for release/${{ steps.version.outputs.version }}"
