@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(cli)* Add license CSV sorting with CLI options
+
 ### 💼 Other
 
 - Optimize dev workflow and relax commitlint rules
@@ -7,6 +11,7 @@
 
 ### 📚 Documentation
 
+- Update CHANGELOG
 - Update CHANGELOG
 ## [3.4.0] - 2026-04-25
 
