@@ -11,55 +11,69 @@ permissions:
   pull-requests: write
 
 jobs:
-  create-release:
-    name: Create Release Candidate
+  release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: 20
+          dotnet-version: 8.0.x
 
-      - name: Install deps
-        run: npm ci
-
-      - name: Determine next version
+      # 🧠 VERSIONING DA GIT TAG (SENZA TOOL ESTERNI)
+      - name: Compute version
         id: version
         run: |
-          npx semantic-release --dry-run > release.txt || true
-          VERSION=$(npx semantic-release --dry-run | grep -oP 'next release version: \K.*' || echo "0.0.0")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest=$LATEST_TAG" >> $GITHUB_OUTPUT
 
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          NEW_VERSION="$MAJOR.$((MINOR+1)).0"
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      # 🌿 CREA RELEASE BRANCH
       - name: Create release branch
         run: |
           git checkout -b release/${{ steps.version.outputs.version }}
           git push origin release/${{ steps.version.outputs.version }}
 
-      - name: Generate changelog
-        run: npm run changelog || true
+      # 📝 BUILD + VALIDAZIONE RELEASE
+      - name: Build release
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+          dotnet test --configuration Release --no-build
 
-      - name: Create Pull Request to main
+      # 📦 (OPZIONALE) PACK NUGET
+      - name: Pack (if needed)
+        run: |
+          dotnet pack --configuration Release --no-build --output ./artifacts
+
+      # 🔀 PR AUTOMATICA VERSO MAIN
+      - name: Create PR to main
         uses: repo-sync/pull-request@v2
         with:
-          destination_branch: main
           source_branch: release/${{ steps.version.outputs.version }}
+          destination_branch: main
           pr_title: "Release ${{ steps.version.outputs.version }}"
           pr_body: |
-            🚀 Automatic Release Candidate
+            🚀 Automatic Release
 
-            - Version: ${{ steps.version.outputs.version }}
-            - Generated from develop
-            - Includes all merged features
+            Version: ${{ steps.version.outputs.version }}
 
-      - name: Deploy preview
+            ✔ Build passed  
+            ✔ Tests passed  
+            ✔ Ready for production review
+
+      # 🌐 PREVIEW TAG (OPTIONALE)
+      - name: Tag preview
         run: |
-          echo "Deploying preview for release/${{ steps.version.outputs.version }}"
-          npm run deploy:preview
-        env:
-          ENVIRONMENT: preview
+          echo "Preview ready for release/${{ steps.version.outputs.version }}"
