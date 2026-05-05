@@ -1,36 +1,37 @@
+# File ci.yml
 name: CI
 
 on:
   push:
-    branches: ["main"]
   pull_request:
-    branches: ["main"]
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout codice
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # IMPORTANTISSIMO per MinVer + Git tags
+          fetch-depth: 0
 
-      # 2. Setup .NET
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      # 3. Restore dependencies
       - name: Restore
         run: dotnet restore
 
-      # 4. Build
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-      # 5. Test
       - name: Test
-        run: dotnet test --configuration Release --no-build
+        run: dotnet test --configuration Release --no-build --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
