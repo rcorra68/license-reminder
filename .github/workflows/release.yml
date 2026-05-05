@@ -64,16 +64,18 @@ jobs:
             --base main \
             --head release/${{ steps.version.outputs.version }} \
             --title "Release ${{ steps.version.outputs.version }}" \
-            --body "🚀 Automatic Release
+            --body "$(cat <<EOF
+        🚀 Automatic Release
 
-        Version: ${{ steps.version.outputs.version }}
+      Version: ${{ steps.version.outputs.version }}
 
-          ✔ Build passed  
-          ✔ Tests passed  
-          ✔ Ready for production review"
+      ✔ Build passed  
+      ✔ Tests passed  
+      ✔ Ready for production review
+      EOF
+      )"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
       # 🌐 PREVIEW TAG (OPTIONALE)
       - name: Tag preview
         run: |
