@@ -1,5 +1,7 @@
 namespace AvvisoScadenzaPatenti.Cli;
 
+using AvvisoScadenzaPatenti.Core.Enums;
+
 using CommandLine;
 
 /// <summary>
@@ -21,4 +23,10 @@ public class Options
     /// </summary>
     [Option('f', "force", Required = false, HelpText = "Overwrite appsettings.json if it already exists.")]
     public bool Force { get; set; }
+
+    [Option("sort-by", Required = false, HelpText = "Field used to sort the CSV (e.g. Name, ExpiryDate, ReleaseDate).")]
+    public CsvSortField? SortBy { get; set; }
+
+    [Option("sort-order", Required = false, Default = CsvSortOrder.Asc, HelpText = "Sort order: asc or desc.")]
+    public CsvSortOrder SortOrder { get; set; }
 }
