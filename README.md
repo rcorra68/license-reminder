@@ -34,7 +34,7 @@ The project follows **Clean Architecture** principles and **SOLID** patterns, or
 1. **Clone the repository**:
 
 ```bash
-git clone [https://github.com/rcorra68/license-reminder.git](https://github.com/rcorra68/license-reminder.git)
+git clone https://github.com/rcorra68/license-reminder.git
 cd license-reminder
 ```
 
