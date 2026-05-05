@@ -6,6 +6,7 @@ using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
 using AvvisoScadenzaPatenti.Core.Shared;
+using AvvisoScadenzaPatenti.Core.Shared.Sorting;
 
 using Microsoft.Extensions.Logging;
 
@@ -139,7 +140,7 @@ public class LicenseOrchestrator
         _logger.LogInformation("Creating new employee record for {FirstName} {LastName}", firstName, lastName);
 
         var uncompliant = _uncompliantRepo.GetByName(firstName, lastName);
-        var email = ResolveEmail(firstName, lastName, uncompliant);
+        var email = this.ResolveEmail(firstName, lastName, uncompliant);
 
         var newEmployee = new Employee
         {

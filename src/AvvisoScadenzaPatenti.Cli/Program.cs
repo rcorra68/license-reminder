@@ -3,8 +3,11 @@
 using System.Text.Json;
 
 using AvvisoScadenzaPatenti.Core.Configuration;
+using AvvisoScadenzaPatenti.Core.Enums;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Services;
+using AvvisoScadenzaPatenti.Core.Shared;
+using AvvisoScadenzaPatenti.Core.Shared.Sorting;
 using AvvisoScadenzaPatenti.Infrastructure.Repositories;
 using AvvisoScadenzaPatenti.Infrastructure.Services;
 using AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
@@ -31,7 +34,13 @@ public class Program
 
     private static async Task<int> WithParsedAsync(Options opts, string[] args)
     {
-        if (opts.Init)
+        var mode =
+            opts.Init ? RunMode.Init :
+            opts.SortBy is not null ? RunMode.Sort :
+            RunMode.Process;
+
+        // Init
+        if (mode == RunMode.Init)
         {
             InitializeConfiguration(opts.Force);
             return 0;
@@ -39,6 +48,24 @@ public class Program
 
         using var host = BuildHost(args, opts);
 
+        // Sort
+        if (mode == RunMode.Sort)
+        {
+            var repo = host.Services.GetRequiredService<ILicenseRepository>();
+
+            var licenses = repo.GetAll();
+
+            var sorted = LicenseSorting.Sort(
+                licenses,
+                opts.SortBy!.Value,
+                opts.SortOrder);
+
+            repo.SaveAll(sorted);
+
+            return 0;
+        }
+
+        // Process
         var emailService = host.Services.GetRequiredService<IEmailService>();
         var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
 

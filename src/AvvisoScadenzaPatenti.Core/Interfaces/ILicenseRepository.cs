@@ -14,4 +14,6 @@ public interface ILicenseRepository
     IEnumerable<License> GetAll();
 
     License? GetByLicenseNumber(string licenseNumber);
+
+    void SaveAll(IEnumerable<License> licenses);
 }

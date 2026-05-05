@@ -10,9 +10,9 @@ A professional .NET Console Application designed to automate the reconciliation 
 
 The project follows **Clean Architecture** principles and **SOLID** patterns, organized into three main layers:
 
-* **AvvisoScadenzaPatenti.Core**: Domain Models, Repository Interfaces, and Business Logic (Orchestrator).
-* **AvvisoScadenzaPatenti.Infrastructure**: Data access (CSV flat files), Email services (MailKit), and Security (Base64/Data Protection).
-* **AvvisoScadenzaPatenti.Cli**: The entry point managing Dependency Injection (Microsoft.Extensions), Configuration, and Command Line parsing.
+- **AvvisoScadenzaPatenti.Core**: Domain Models, Repository Interfaces, and Business Logic (Orchestrator).
+- **AvvisoScadenzaPatenti.Infrastructure**: Data access (CSV flat files), Email services (MailKit), and Security (Base64/Data Protection).
+- **AvvisoScadenzaPatenti.Cli**: The entry point managing Dependency Injection (Microsoft.Extensions), Configuration, and Command Line parsing.
 
 ## 🛠 Tech Stack
 
@@ -56,16 +56,18 @@ Update `src/AvvisoScadenzaPatenti.Cli/appsettings.json` with your SMTP settings 
 dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj
 ```
 
-### Encrypt a password
-
-```bash
-dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --crypt "your_password"
-```
-
 ### Show help
 
 ```bash
 dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --help
+```
+
+### 📊 Sort and persist license CSV
+
+Sorts the license CSV file and overwrites it with the ordered data.
+
+```bash
+dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --sort-by [Name|ExpiryDate|ReleaseDate] --sort-order [Asc|Desc]
 ```
 
 ## 🧪 Running Tests
@@ -74,6 +76,14 @@ To execute the unit test suite:
 
 ```bash
 dotnet test
+```
+
+## ⚙️ Build & Publish (Linux single-file)
+
+Generates a self-contained single executable for Ubuntu:
+
+```bash
+dotnet publish src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true
 ```
 
 ## 🔐 Security & Configuration

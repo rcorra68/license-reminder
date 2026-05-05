@@ -20,6 +20,7 @@ public class LicenseRepository : ILicenseRepository
     private readonly string _filePath;
     private readonly ILogger<LicenseRepository> _logger;
     private readonly CsvConfiguration _csvConfig;
+    private List<License> _cache = [];
 
     /// <summary>
     /// Initializes a new instance of the LicenseRepository.
@@ -61,6 +62,9 @@ public class LicenseRepository : ILicenseRepository
     /// <returns>A list of licenses read from the CSV file.</returns>
     public IEnumerable<License> GetAll()
     {
+        // Use the cache if already populated (Singleton-like pattern)
+        if (_cache?.Count > 0) return _cache;
+
         _logger.LogInformation("Loading licenses from {Path}", _filePath);
 
         if (!File.Exists(_filePath))
@@ -84,9 +88,40 @@ public class LicenseRepository : ILicenseRepository
     /// <returns>The matching license if found; otherwise null.</returns>
     public License? GetByLicenseNumber(string licenseNumber)
     {
-        var licenses = GetAll();
+        var licenses = this.GetAll();
 
         return licenses.FirstOrDefault(e =>
             string.Equals(e.LicenseNumber, licenseNumber, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void SaveAll(IEnumerable<License> licenses)
+    {
+        _cache = licenses.ToList();
+        this.SaveChanges();
+    }
+
+    /// <summary>
+    /// Writes the current cache of licenses back to the CSV file, overwriting it.
+    /// Uses the class-wide CSV configuration for header and field handling.
+    /// Logs any error but does not swallow the exception.
+    /// </summary>
+    private void SaveChanges()
+    {
+        try
+        {
+            using var writer = new StreamWriter(_filePath);
+            using var csv = new CsvWriter(writer, _csvConfig);
+
+            // Register the mapping here so CsvReader knows how to bind columns to properties
+            csv.Context.RegisterClassMap<LicenseMap>();
+
+            // Now the compiler knows _cache is not null because of the check above
+            csv.WriteRecords(_cache);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to write employees to CSV at {Path}", _filePath);
+            throw;
+        }
     }
 }

@@ -96,7 +96,7 @@ public class EmployeeRepository : IEmployeeRepository
     /// <returns>The matching employee, or null if not found.</returns>
     public Employee? GetByEmail(string email)
     {
-        var employees = GetAll();
+        var employees = this.GetAll();
 
         return employees.FirstOrDefault(e =>
             string.Equals(e.Mail, email, StringComparison.OrdinalIgnoreCase));
@@ -112,7 +112,7 @@ public class EmployeeRepository : IEmployeeRepository
     public Employee? GetByName(string firstName, string lastName)
     {
         // Ensure the cache is populated before searching
-        var employees = GetAll();
+        var employees = this.GetAll();
 
         // Perform a case-insensitive search on both fields
         return employees.FirstOrDefault(e =>
@@ -133,7 +133,7 @@ public class EmployeeRepository : IEmployeeRepository
             throw new ArgumentException("Employee email cannot be null or empty.", nameof(employee));
 
         // Ensure cache is initialized
-        GetAll();
+        this.GetAll();
 
         // Check for duplicates (case-insensitive)
         bool exists = _cache.Any(e =>
@@ -149,7 +149,7 @@ public class EmployeeRepository : IEmployeeRepository
 
         _logger.LogDebug("Added employee {Email} to cache.", employee.Mail);
 
-        SaveChanges();
+        this.SaveChanges();
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public class EmployeeRepository : IEmployeeRepository
     {
         ArgumentNullException.ThrowIfNull(employee);
 
-        GetAll();
+        this.GetAll();
 
         // Find the index of the existing record. 
         // We match by email (case-insensitive)
@@ -176,7 +176,7 @@ public class EmployeeRepository : IEmployeeRepository
             _logger.LogDebug("Updated employee {Email} in memory cache.", employee.Mail);
 
             // Persist the updated list to the CSV file
-            SaveChanges();
+            this.SaveChanges();
         }
         else
         {

@@ -82,7 +82,7 @@ public class MailKitEmailService : IEmailService
     /// <returns>True if the SMTP connection and send operation succeed; otherwise, false.</returns>
     public async Task<bool> VerifyEmailConnectivityAsync(CancellationToken ct = default)
     {
-        var message = CreateHealthCheckMessage();
+        var message = this.CreateHealthCheckMessage();
 
         try
         {
