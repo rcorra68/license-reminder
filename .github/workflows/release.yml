@@ -1,67 +1,65 @@
-name: Release
+# File release.yml
+name: Release Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - develop
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  release:
+  create-release:
+    name: Create Release Candidate
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
-    # 1. Checkout completo (fondamentale per git-cliff)
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    # 2. Install git-cliff (cross-platform via cargo)
-    - name: Install git-cliff
-      run: cargo install git-cliff
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    # 3. Calcola versione semver basata sui commit
-    - name: Compute next version
-      id: version
-      run: |
-        NEXT_VERSION=$(git cliff --bumped-version)
-        echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
-        echo "Next version: $NEXT_VERSION"
+      - name: Install deps
+        run: npm ci
 
-    # 4. Genera changelog
-    - name: Generate changelog
-      run: git-cliff -o CHANGELOG.md
+      - name: Determine next version
+        id: version
+        run: |
+          npx semantic-release --dry-run > release.txt || true
+          VERSION=$(npx semantic-release --dry-run | grep -oP 'next release version: \K.*' || echo "0.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    # 5. Commit changelog aggiornato
-    - name: Commit changelog
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Create release branch
+        run: |
+          git checkout -b release/${{ steps.version.outputs.version }}
+          git push origin release/${{ steps.version.outputs.version }}
 
-        git add CHANGELOG.md
+      - name: Generate changelog
+        run: npm run changelog || true
 
-        if git diff --staged --quiet; then
-          echo "No changelog changes"
-        else
-          git commit -m "docs: update CHANGELOG for $NEXT_VERSION"
-        fi
+      - name: Create Pull Request to main
+        uses: repo-sync/pull-request@v2
+        with:
+          destination_branch: main
+          source_branch: release/${{ steps.version.outputs.version }}
+          pr_title: "Release ${{ steps.version.outputs.version }}"
+          pr_body: |
+            🚀 Automatic Release Candidate
 
-    # 6. Crea tag
-    - name: Create tag
-      run: |
-        git tag $NEXT_VERSION
+            - Version: ${{ steps.version.outputs.version }}
+            - Generated from develop
+            - Includes all merged features
 
-    # 7. Push commit + tag
-    - name: Push changes
-      run: |
-        git push origin main
-        git push origin $NEXT_VERSION
-
-    # 8. GitHub Release automatica
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ env.NEXT_VERSION }}
-        generate_release_notes: true
+      - name: Deploy preview
+        run: |
+          echo "Deploying preview for release/${{ steps.version.outputs.version }}"
+          npm run deploy:preview
+        env:
+          ENVIRONMENT: preview
