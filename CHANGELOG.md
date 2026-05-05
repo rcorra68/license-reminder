@@ -1,4 +1,4 @@
-## [unreleased]
+## [3.5.0] - 2026-05-05
 
 ### 🚀 Features
 
@@ -13,6 +13,7 @@
 
 - Update CHANGELOG
 - Update CHANGELOG
+- Update CHANGELOG for v3.5.0
 ## [3.4.0] - 2026-04-25
 
 ### 🚀 Features
