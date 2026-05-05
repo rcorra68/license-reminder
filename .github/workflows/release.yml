@@ -59,20 +59,21 @@ jobs:
 
       # 🔀 PR AUTOMATICA VERSO MAIN
       - name: Create PR to main
-        uses: repo-sync/pull-request@v2
-        with:
-          source_branch: release/${{ steps.version.outputs.version }}
-          destination_branch: main
-          pr_title: "Release ${{ steps.version.outputs.version }}"
-          pr_body: |
-            🚀 Automatic Release
+        run: |
+          gh pr create \
+            --base main \
+            --head release/${{ steps.version.outputs.version }} \
+            --title "Release ${{ steps.version.outputs.version }}" \
+            --body "🚀 Automatic Release
 
-            Version: ${{ steps.version.outputs.version }}
+        Version: ${{ steps.version.outputs.version }}
 
-            ✔ Build passed  
-            ✔ Tests passed  
-            ✔ Ready for production review
-
+          ✔ Build passed  
+          ✔ Tests passed  
+          ✔ Ready for production review"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
       # 🌐 PREVIEW TAG (OPTIONALE)
       - name: Tag preview
         run: |
