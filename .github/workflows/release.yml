@@ -13,7 +13,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout full history
         uses: actions/checkout@v4
@@ -25,49 +24,50 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Configure Git Identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
       - name: Compute version
         id: version
+        shell: bash
         run: |
+          # Fallback to v0.0.0 if no tags exist
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "latest=$LATEST_TAG" >> $GITHUB_OUTPUT
-
           VERSION=${LATEST_TAG#v}
+          
+          # Basic Semantic Versioning logic (Minor increment)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-
           NEW_VERSION="$MAJOR.$((MINOR+1)).0"
-
+          
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Computed version: $NEW_VERSION"
 
-      - name: Create release branch
-        run: |
-          git checkout -b release/${{ steps.version.outputs.version }}
-          git push origin release/${{ steps.version.outputs.version }}
-
-      - name: Build release
+      - name: Build and Test
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
           dotnet test --configuration Release --no-build
 
-      - name: Pack (if needed)
+      - name: Create Release Branch and Push
         run: |
-          dotnet pack --configuration Release --no-build --output ./artifacts
-
+          BRANCH_NAME="release/${{ steps.version.outputs.version }}"
+          git checkout -b $BRANCH_NAME
+          git push origin $BRANCH_NAME --force
+          
       - name: Create PR to main
         run: |
-          BODY="🚀 Automatic Release
-
-Version: ${{ steps.version.outputs.version }}
-
-✔ Build passed  
-✔ Tests passed  
-✔ Ready for production review"
-
           gh pr create \
             --base main \
             --head release/${{ steps.version.outputs.version }} \
-            --title "Release ${{ steps.version.outputs.version }}" \
-            --body "$BODY"
+            --title "feat: release ${{ steps.version.outputs.version }}" \
+            --body "🚀 **Automatic Release**
+            
+            - **Version:** ${{ steps.version.outputs.version }}
+            - **Source:** ${{ github.ref_name }}
+            
+            Build and tests passed successfully. Ready for merge to main."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
