@@ -2,7 +2,6 @@
   "profiles": {
     "avviso-scadenza-patenti": {
       "commandName": "Project",
-      "commandLineArgs": "--sort-by ExpiryDate --sort-order Desc",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

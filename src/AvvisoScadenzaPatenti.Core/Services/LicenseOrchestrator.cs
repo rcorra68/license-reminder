@@ -61,53 +61,37 @@ public class LicenseOrchestrator
     public async Task ProcessLicensesAsync(CancellationToken ct = default)
     {
         var start = DateTime.UtcNow;
+        int processed = 0, sent = 0, errors = 0;
 
-        int processed = 0;
-        int sent = 0;
-        int errors = 0;
+        var version = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
 
-        try
+        _logger.LogInformation("Starting License Reminder v{Version}", version);
+
+        var licenses = _licenseRepo.GetAll();
+
+        foreach (var license in licenses)
         {
-            var version =
-                Assembly.GetExecutingAssembly()
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion;
+            ct.ThrowIfCancellationRequested();
+            processed++;
 
-            _logger.LogInformation(
-                "Starting License Reminder v{Version}", version);
+            var employee = this.GetOrCreateEmployee(license.FirstName, license.LastName);
 
-            var licenses = _licenseRepo.GetAll();
-
-            foreach (var license in licenses)
+            try
             {
-                ct.ThrowIfCancellationRequested();
-
-                processed++;
-
-                var employee = this.GetOrCreateEmployee(license.FirstName, license.LastName);
-
-                try
-                {
-                    bool emailSent = await this.EvaluateExpiryAsync(license, employee, ct);
-                    if (emailSent)
-                        sent++;
-                }
-                catch (Exception ex)
-                {
-                    errors++;
-
-                    _logger.LogError(ex,
-                        "Error processing license for {Email}",
-                        employee.Mail);
-                }
+                if (await this.EvaluateExpiryAsync(license, employee, ct))
+                    sent++;
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                _logger.LogError(ex, "Error processing license for {Email}", employee.Mail);
             }
         }
-        catch (Exception)
-        {
-            errors++;
-            throw;
-        }
-        finally
+
+        // Report inviato solo se c'è stato qualcosa da processare
+        if (processed > 0)
         {
             var report = new DailyReport
             {

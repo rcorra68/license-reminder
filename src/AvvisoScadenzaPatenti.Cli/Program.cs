@@ -6,10 +6,8 @@ using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Enums;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Services;
-using AvvisoScadenzaPatenti.Core.Shared;
 using AvvisoScadenzaPatenti.Core.Shared.Sorting;
 using AvvisoScadenzaPatenti.Infrastructure.Repositories;
-using AvvisoScadenzaPatenti.Infrastructure.Services;
 using AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 
 using CommandLine;
@@ -39,7 +37,6 @@ public class Program
             opts.SortBy is not null ? RunMode.Sort :
             RunMode.Process;
 
-        // Init
         if (mode == RunMode.Init)
         {
             InitializeConfiguration(opts.Force);
@@ -47,31 +44,25 @@ public class Program
         }
 
         using var host = BuildHost(args, opts);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var ct = cts.Token;
 
-        // Sort
+        await host.StartAsync(ct);
+
         if (mode == RunMode.Sort)
         {
             var repo = host.Services.GetRequiredService<ILicenseRepository>();
-
             var licenses = repo.GetAll();
-
-            var sorted = LicenseSorting.Sort(
-                licenses,
-                opts.SortBy!.Value,
-                opts.SortOrder);
-
+            var sorted = LicenseSorting.Sort(licenses, opts.SortBy!.Value, opts.SortOrder);
             repo.SaveAll(sorted);
 
+            await host.StopAsync(CancellationToken.None);
             return 0;
         }
 
         // Process
         var emailService = host.Services.GetRequiredService<IEmailService>();
         var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
-
-        // CancellationToken con timeout (best practice per cron job)
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var ct = cts.Token;
 
         if (!await emailService.VerifyEmailConnectivityAsync(ct))
         {
@@ -80,19 +71,13 @@ public class Program
 
         await orchestrator.ProcessLicensesAsync(ct);
 
+        await host.StopAsync(CancellationToken.None);
         return 0;
     }
 
     private static IHost BuildHost(string[] args, Options opts)
     {
         var builder = Host.CreateApplicationBuilder(args);
-
-        var environment =
-            Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-            ?? "Production";
-
-        builder.Environment.EnvironmentName = environment;
 
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration)
@@ -136,9 +121,6 @@ public class Program
 
         builder.Services.AddTransient<IEmailService, MailKitEmailService>();
         builder.Services.AddTransient<LicenseOrchestrator>();
-
-        // Infrastructure services
-        builder.Services.AddSingleton<IConfigService, JsonConfigService>();
     }
 
     private static int HandleParseErrors(IEnumerable<Error> errors)
