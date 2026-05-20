@@ -1,5 +1,6 @@
 ﻿namespace AvvisoScadenzaPatenti.Cli;
 
+using System.Reflection;
 using System.Text.Json;
 
 using AvvisoScadenzaPatenti.Core.Configuration;
@@ -18,6 +19,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Serilog;
+using Serilog.Core;
 
 public class Program
 {
@@ -48,6 +50,12 @@ public class Program
         var ct = cts.Token;
 
         await host.StartAsync(ct);
+
+        var version = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        Log.Information("Starting License Reminder v{Version}", version);
 
         if (mode == RunMode.Sort)
         {

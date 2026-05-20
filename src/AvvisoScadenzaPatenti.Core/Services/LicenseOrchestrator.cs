@@ -1,12 +1,8 @@
 namespace AvvisoScadenzaPatenti.Core.Services;
 
-using System.Reflection;
-
 using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
-using AvvisoScadenzaPatenti.Core.Shared;
-using AvvisoScadenzaPatenti.Core.Shared.Sorting;
 
 using Microsoft.Extensions.Logging;
 
@@ -62,12 +58,6 @@ public class LicenseOrchestrator
     {
         var start = DateTime.UtcNow;
         int processed = 0, sent = 0, errors = 0;
-
-        var version = Assembly.GetExecutingAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion;
-
-        _logger.LogInformation("Starting License Reminder v{Version}", version);
 
         var licenses = _licenseRepo.GetAll();
 
