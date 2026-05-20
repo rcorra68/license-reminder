@@ -91,7 +91,7 @@ public class LicenseOrchestrator
         }
 
         // Report inviato solo se c'è stato qualcosa da processare
-        if (processed > 0)
+        if (sent > 0)
         {
             var report = new DailyReport
             {
