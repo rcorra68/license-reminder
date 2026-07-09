@@ -24,7 +24,7 @@ public class Options
     [Option('f', "force", Required = false, HelpText = "Overwrite appsettings.json if it already exists.")]
     public bool Force { get; set; }
 
-    [Option("sort-by", Required = false, HelpText = "Field used to sort the CSV (e.g. Name, ExpiryDate, ReleaseDate).")]
+    [Option("sort-by", Required = false, HelpText = "Field used to sort the CSV (e.g. Name, ExpiryDate, ReleaseDate). Sorting by ReleaseDate (Asc) surfaces licenses still missing a release date.")]
     public CsvSortField? SortBy { get; set; }
 
     [Option("sort-order", Required = false, Default = CsvSortOrder.Asc, HelpText = "Sort order: asc or desc.")]

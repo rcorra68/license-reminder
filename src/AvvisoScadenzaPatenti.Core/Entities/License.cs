@@ -11,7 +11,7 @@ public class License
     public string CardNumber { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public string FirstName { get; set; } = null!;
-    public DateTime ReleaseDate { get; set; }
+    public DateTime? ReleaseDate { get; set; }
     public DateTime ExpiryDate { get; set; }
     public string Status { get; set; } = null!;
 }
