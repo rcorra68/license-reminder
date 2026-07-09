@@ -78,7 +78,8 @@ public class LicenseRepository : ILicenseRepository
 
         csv.Context.RegisterClassMap<LicenseMap>();
 
-        return csv.GetRecords<License>().ToList();
+        _cache = csv.GetRecords<License>().ToList();
+        return _cache;
     }
 
     /// <summary>
