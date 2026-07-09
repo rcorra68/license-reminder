@@ -78,7 +78,8 @@ public class LicenseRepository : ILicenseRepository
 
         csv.Context.RegisterClassMap<LicenseMap>();
 
-        return csv.GetRecords<License>().ToList();
+        _cache = csv.GetRecords<License>().ToList();
+        return _cache;
     }
 
     /// <summary>
@@ -92,6 +93,20 @@ public class LicenseRepository : ILicenseRepository
 
         return licenses.FirstOrDefault(e =>
             string.Equals(e.LicenseNumber, licenseNumber, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public IEnumerable<License> SearchByName(string query)
+    {
+        var licenses = this.GetAll();
+
+        var tokens = query.Split(
+            ' ',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return licenses.Where(l =>
+            tokens.All(token =>
+                l.FirstName.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+                l.LastName.Contains(token, StringComparison.OrdinalIgnoreCase)));
     }
 
     public void SaveAll(IEnumerable<License> licenses)

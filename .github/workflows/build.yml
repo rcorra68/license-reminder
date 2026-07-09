@@ -1,0 +1,47 @@
+name: Production Build
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_PATH: src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj
+  ARTIFACT_NAME: license-reminder
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "untagged")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building $VERSION"
+
+      - name: Publish
+        run: |
+          dotnet publish "${{ env.PROJECT_PATH }}" \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -o out \
+            /p:PublishSingleFile=true
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-${{ steps.version.outputs.version }}
+          path: out
+          retention-days: 30

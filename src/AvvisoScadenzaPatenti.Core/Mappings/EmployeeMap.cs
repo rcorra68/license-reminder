@@ -1,8 +1,8 @@
 ﻿namespace AvvisoScadenzaPatenti.Core.Mappings;
 
-using CsvHelper.Configuration;
-
 using AvvisoScadenzaPatenti.Core.Entities;
+using CsvHelper.Configuration;
+using System.Globalization;
 
 public sealed class EmployeeMap : ClassMap<Employee>
 {
@@ -11,6 +11,10 @@ public sealed class EmployeeMap : ClassMap<Employee>
         this.Map(m => m.LastName).Name("COGNOME");
         this.Map(m => m.FirstName).Name("NOME");
         this.Map(m => m.Mail).Name("POSTA_ELETTRONICA");
+        this.Map(m => m.BirthDate).Name("DATA_NASCITA")
+            .TypeConverterOption.Format("dd/MM/yyyy")
+            .TypeConverterOption.CultureInfo(new CultureInfo("it-IT"))
+            .Optional();
         this.Map(m => m.Warning2Months).Name("DUE_MESI")
             .Default("N")
             .TypeConverterOption.BooleanValues(true, true, "Y")

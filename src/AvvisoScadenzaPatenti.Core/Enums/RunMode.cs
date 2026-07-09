@@ -2,7 +2,10 @@
 
 public enum RunMode
 {
-    Process,
-    Sort,
-    Init
+	Process,
+	Sort,
+	Init,
+	Update,
+	Show,
+	SearchByName
 }
