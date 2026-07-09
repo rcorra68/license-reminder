@@ -29,4 +29,13 @@ public class Options
 
     [Option("sort-order", Required = false, Default = CsvSortOrder.Asc, HelpText = "Sort order: asc or desc.")]
     public CsvSortOrder SortOrder { get; set; }
+
+    [Option("update-license", Required = false, HelpText = "Driving licence number to be updated.")]
+    public string? UpdateLicenseNumber { get; set; }
+
+    [Option("new-expiry-date", Required = false, HelpText = "New expiration date (format yyyy-MM-dd).")]
+    public string? NewExpiryDate { get; set; }
+
+    [Option("name", Required = false, HelpText = "Free search text: first name, last name, part of one or both, in any order.")]
+    public string? Name { get; set; }
 }

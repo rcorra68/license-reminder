@@ -1,8 +1,5 @@
 ﻿namespace AvvisoScadenzaPatenti.Cli;
 
-using System.Reflection;
-using System.Text.Json;
-
 using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Enums;
 using AvvisoScadenzaPatenti.Core.Interfaces;
@@ -10,16 +7,15 @@ using AvvisoScadenzaPatenti.Core.Services;
 using AvvisoScadenzaPatenti.Core.Shared.Sorting;
 using AvvisoScadenzaPatenti.Infrastructure.Repositories;
 using AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
-
 using CommandLine;
-
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
 using Serilog;
-using Serilog.Core;
+using System.Globalization;
+using System.Reflection;
+using System.Text.Json;
 
 public class Program
 {
@@ -34,8 +30,15 @@ public class Program
 
     private static async Task<int> WithParsedAsync(Options opts, string[] args)
     {
+        var hasUpdateTarget = opts.UpdateLicenseNumber is not null;
+        var hasNewExpiryDate = !string.IsNullOrWhiteSpace(opts.NewExpiryDate);
+        var hasNameSearch = !string.IsNullOrWhiteSpace(opts.Name);
+
         var mode =
             opts.Init ? RunMode.Init :
+            hasUpdateTarget && hasNewExpiryDate ? RunMode.Update :
+            hasUpdateTarget ? RunMode.Show :
+            hasNameSearch ? RunMode.SearchByName :
             opts.SortBy is not null ? RunMode.Sort :
             RunMode.Process;
 
@@ -43,6 +46,12 @@ public class Program
         {
             InitializeConfiguration(opts.Force);
             return 0;
+        }
+
+        if (mode == RunMode.Update && string.IsNullOrWhiteSpace(opts.NewExpiryDate))
+        {
+            Console.WriteLine("You must specify --new-expiry-date along with --update-license.");
+            return 1;
         }
 
         using var host = BuildHost(args, opts);
@@ -63,6 +72,94 @@ public class Program
             var licenses = repo.GetAll();
             var sorted = LicenseSorting.Sort(licenses, opts.SortBy!.Value, opts.SortOrder);
             repo.SaveAll(sorted);
+
+            await host.StopAsync(CancellationToken.None);
+            return 0;
+        }
+
+        if (mode == RunMode.SearchByName)
+        {
+            var licenseRepo = host.Services.GetRequiredService<ILicenseRepository>();
+            var employeeRepo = host.Services.GetRequiredService<IEmployeeRepository>();
+
+            var matches = licenseRepo.SearchByName(opts.Name!).ToList();
+
+            if (matches.Count == 0)
+            {
+                Log.Warning("No licenses found for '{Query}'.", opts.Name);
+                await host.StopAsync(CancellationToken.None);
+                return 1;
+            }
+
+            foreach (var license in matches)
+            {
+                var employee = employeeRepo.GetByName(license.FirstName, license.LastName);
+                var birthDateText = employee?.BirthDate is { } bd ? bd.ToString("dd/MM/yyyy") : "n/d";
+
+                Console.WriteLine($"{license.FirstName} {license.LastName} — born on {birthDateText}");
+                Console.WriteLine($"  License No. {license.LicenseNumber} — Current expiration date: {license.ExpiryDate:yyyy-MM-dd}");
+                Console.WriteLine();
+            }
+
+            if (matches.Count > 1)
+            {
+                Console.WriteLine($"Found {matches.Count} licenses matching '{opts.Name}'. Use --update-license <number> to update the correct one.");
+            }
+
+            await host.StopAsync(CancellationToken.None);
+            return 0;
+        }
+
+        if (mode == RunMode.Show)
+        {
+            var repo = host.Services.GetRequiredService<ILicenseRepository>();
+            var license = repo.GetByLicenseNumber(opts.UpdateLicenseNumber!);
+
+            if (license is null)
+            {
+                Log.Warning("No license found with number {LicenseNumber}.", opts.UpdateLicenseNumber);
+                await host.StopAsync(CancellationToken.None);
+                return 1;
+            }
+
+            Console.WriteLine($"{license.FirstName} {license.LastName} — license n. {license.LicenseNumber}");
+            Console.WriteLine($"Current expiration: {license.ExpiryDate:yyyy-MM-dd}");
+
+            await host.StopAsync(CancellationToken.None);
+            return 0;
+        }
+
+        if (mode == RunMode.Update)
+        {
+            if (!DateTime.TryParseExact(
+                    opts.NewExpiryDate,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var newExpiryDate))
+            {
+                Console.WriteLine($"Invalid date format: '{opts.NewExpiryDate}'. Usa yyyy-MM-dd.");
+                await host.StopAsync(CancellationToken.None);
+                return 1;
+            }
+
+            var repo = host.Services.GetRequiredService<ILicenseRepository>();
+            var license = repo.GetByLicenseNumber(opts.UpdateLicenseNumber!);
+
+            if (license is null)
+            {
+                Log.Warning("No license found with number {LicenseNumber}.", opts.UpdateLicenseNumber);
+                await host.StopAsync(CancellationToken.None);
+                return 1;
+            }
+
+            license.ExpiryDate = newExpiryDate;
+            repo.SaveAll(repo.GetAll());
+
+            Log.Information(
+                "Driving licence {LicenseNumber} updated: new expiration date {ExpiryDate:yyyy-MM-dd}.",
+                opts.UpdateLicenseNumber,
+                newExpiryDate);
 
             await host.StopAsync(CancellationToken.None);
             return 0;

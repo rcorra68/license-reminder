@@ -95,6 +95,20 @@ public class LicenseRepository : ILicenseRepository
             string.Equals(e.LicenseNumber, licenseNumber, StringComparison.OrdinalIgnoreCase));
     }
 
+    public IEnumerable<License> SearchByName(string query)
+    {
+        var licenses = this.GetAll();
+
+        var tokens = query.Split(
+            ' ',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return licenses.Where(l =>
+            tokens.All(token =>
+                l.FirstName.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+                l.LastName.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
     public void SaveAll(IEnumerable<License> licenses)
     {
         _cache = licenses.ToList();
