@@ -12,6 +12,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -45,3 +47,19 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}-${{ steps.version.outputs.version }}
           path: out
           retention-days: 30
+
+      - name: Package for release
+        if: steps.version.outputs.version != 'untagged'
+        run: |
+          cd out
+          zip -r "../${{ env.ARTIFACT_NAME }}-${{ steps.version.outputs.version }}-linux-x64.zip" .
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.version != 'untagged'
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            "${{ env.ARTIFACT_NAME }}-${{ steps.version.outputs.version }}-linux-x64.zip" \
+            --title "${{ steps.version.outputs.version }}" \
+            --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

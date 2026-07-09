@@ -22,7 +22,8 @@ public sealed class LicenseMap : ClassMap<License>
         this.Map(m => m.FirstName).Name("NOME");
         this.Map(m => m.ReleaseDate).Name("DATA_RILASCIO")
             .TypeConverterOption.Format(dateFormat)
-            .TypeConverterOption.CultureInfo(cultureInfo);
+            .TypeConverterOption.CultureInfo(cultureInfo)
+            .Optional();
         this.Map(m => m.ExpiryDate).Name("DATA_SCADENZA")
             .TypeConverterOption.Format(dateFormat)
             .TypeConverterOption.CultureInfo(cultureInfo);
