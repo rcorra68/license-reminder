@@ -5,6 +5,7 @@ public class Employee
     public required string LastName { get; set; }
     public required string FirstName { get; set; }
     public required string Mail { get; set; }
+    public DateTime? BirthDate { get; set; }
     public bool Warning1Day { get; set; } = false;
     public bool Warning1Week { get; set; } = false;
     public bool Warning2Weeks { get; set; } = false;
