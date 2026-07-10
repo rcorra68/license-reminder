@@ -33,12 +33,14 @@ public class Program
         var hasUpdateTarget = opts.UpdateLicenseNumber is not null;
         var hasNewExpiryDate = !string.IsNullOrWhiteSpace(opts.NewExpiryDate);
         var hasNameSearch = !string.IsNullOrWhiteSpace(opts.Name);
+        var hasUpcomingExpirations = opts.UpcomingExpirations is not null;
 
         var mode =
             opts.Init ? RunMode.Init :
             hasUpdateTarget && hasNewExpiryDate ? RunMode.Update :
             hasUpdateTarget ? RunMode.Show :
             hasNameSearch ? RunMode.SearchByName :
+            hasUpcomingExpirations ? RunMode.UpcomingExpirations :
             opts.SortBy is not null ? RunMode.Sort :
             RunMode.Process;
 
@@ -104,6 +106,31 @@ public class Program
             if (matches.Count > 1)
             {
                 Console.WriteLine($"Found {matches.Count} licenses matching '{opts.Name}'. Use --update-license <number> to update the correct one.");
+            }
+
+            await host.StopAsync(CancellationToken.None);
+            return 0;
+        }
+
+        if (mode == RunMode.UpcomingExpirations)
+        {
+            var repo = host.Services.GetRequiredService<ILicenseRepository>();
+            var licenses = repo.GetAll();
+
+            var count = opts.UpcomingExpirations!.FirstOrDefault();
+            if (count <= 0)
+            {
+                count = 5;
+            }
+
+            var upcoming = LicenseSorting
+                .Sort(licenses, CsvSortField.ExpiryDate, CsvSortOrder.Asc)
+                .Take(count);
+
+            foreach (var license in upcoming)
+            {
+                var expiredMarker = license.ExpiryDate < DateTime.Today ? "[SCADUTA] " : string.Empty;
+                Console.WriteLine($"{expiredMarker}{license.LastName} {license.FirstName} — scadenza: {license.ExpiryDate:yyyy-MM-dd}");
             }
 
             await host.StopAsync(CancellationToken.None);

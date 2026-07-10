@@ -38,4 +38,7 @@ public class Options
 
     [Option("name", Required = false, HelpText = "Free search text: first name, last name, part of one or both, in any order.")]
     public string? Name { get; set; }
+
+    [Option("upcoming-expirations", Required = false, HelpText = "Show the N soonest-expiring licenses, including already expired ones. Usage: --upcoming-expirations [N]")]
+    public IEnumerable<int>? UpcomingExpirations { get; set; }
 }
