@@ -1,5 +1,6 @@
 ﻿namespace AvvisoScadenzaPatenti.Cli;
 
+using AvvisoScadenzaPatenti.Cli.Commands;
 using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Enums;
@@ -72,224 +73,22 @@ public class Program
 
         Log.Information("Starting License Reminder v{Version}", version);
 
-        if (mode == RunMode.Sort)
+        ILicenseCommand command = mode switch
         {
-            var repo = host.Services.GetRequiredService<ILicenseRepository>();
-            var licenses = repo.GetAll();
-            var sorted = LicenseSorting.Sort(licenses, opts.SortBy!.Value, opts.SortOrder);
-            repo.SaveAll(sorted);
+            RunMode.Sort => host.Services.GetRequiredService<SortLicensesCommand>(),
+            RunMode.SearchByName => host.Services.GetRequiredService<SearchLicenseByNameCommand>(),
+            RunMode.UpcomingExpirations => host.Services.GetRequiredService<UpcomingExpirationsCommand>(),
+            RunMode.MatchFiscalCode => host.Services.GetRequiredService<MatchFiscalCodeCommand>(),
+            RunMode.Show => host.Services.GetRequiredService<ShowLicenseCommand>(),
+            RunMode.Update => host.Services.GetRequiredService<UpdateLicenseCommand>(),
+            RunMode.Process => host.Services.GetRequiredService<ProcessLicensesCommand>(),
+            _ => throw new InvalidOperationException($"Unhandled run mode: {mode}")
+        };
 
-            await host.StopAsync(CancellationToken.None);
-            return 0;
-        }
-
-        if (mode == RunMode.SearchByName)
-        {
-            var licenseRepo = host.Services.GetRequiredService<ILicenseRepository>();
-            var employeeRepo = host.Services.GetRequiredService<IEmployeeRepository>();
-
-            var matches = licenseRepo.SearchByName(opts.Name!).ToList();
-
-            if (matches.Count == 0)
-            {
-                Log.Warning("No licenses found for '{Query}'.", opts.Name);
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-
-            foreach (var license in matches)
-            {
-                var employee = employeeRepo.GetByName(license.FirstName, license.LastName);
-                var birthDateText = employee?.BirthDate is { } bd ? bd.ToString("dd/MM/yyyy") : "n/d";
-
-                Console.WriteLine($"{license.FirstName} {license.LastName} — born on {birthDateText}");
-                Console.WriteLine($"  License No. {license.LicenseNumber} — Current expiration date: {license.ExpiryDate:yyyy-MM-dd}");
-                Console.WriteLine();
-            }
-
-            if (matches.Count > 1)
-            {
-                Console.WriteLine($"Found {matches.Count} licenses matching '{opts.Name}'. Use --update-license <number> to update the correct one.");
-            }
-
-            await host.StopAsync(CancellationToken.None);
-            return 0;
-        }
-
-        if (mode == RunMode.UpcomingExpirations)
-        {
-            var repo = host.Services.GetRequiredService<ILicenseRepository>();
-            var licenses = repo.GetAll();
-
-            var count = opts.UpcomingExpirations!.FirstOrDefault();
-            if (count <= 0)
-            {
-                count = 5;
-            }
-
-            var upcoming = LicenseSorting
-                .Sort(licenses, CsvSortField.ExpiryDate, CsvSortOrder.Asc)
-                .Take(count);
-
-            foreach (var license in upcoming)
-            {
-                var expiredMarker = license.ExpiryDate < DateTime.Today ? "[SCADUTA] " : string.Empty;
-                Console.WriteLine($"{expiredMarker}{license.LastName} {license.FirstName} — scadenza: {license.ExpiryDate:yyyy-MM-dd}");
-            }
-
-            await host.StopAsync(CancellationToken.None);
-            return 0;
-        }
-
-        if (mode == RunMode.MatchFiscalCode)
-        {
-            var employeeRepo = host.Services.GetRequiredService<IEmployeeRepository>();
-
-            var cf = opts.MatchCf!.Trim().ToUpperInvariant();
-
-            if (cf.Length < 11)
-            {
-                Console.WriteLine($"Invalid fiscal code: '{opts.MatchCf}'. Expected at least 11 characters.");
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-
-            var birthDate = FiscalCodeDecoder.ExtractBirthDate(cf);
-            var surnameCode = FiscalCodeDecoder.ExtractSurnameCode(cf);
-            var nameCode = FiscalCodeDecoder.ExtractNameCode(cf);
-
-            var candidates = employeeRepo.GetAll()
-                .Where(e =>
-                    FiscalCodeDecoder.ComputeSurnameCode(e.LastName) == surnameCode &&
-                    FiscalCodeDecoder.ComputeNameCode(e.FirstName) == nameCode)
-                .ToList();
-
-            if (candidates.Count == 0)
-            {
-                Console.WriteLine($"No employee found matching fiscal code '{opts.MatchCf}'.");
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-
-            Employee selected;
-
-            if (candidates.Count == 1)
-            {
-                selected = candidates[0];
-            }
-            else if (opts.ResolveIndex is null)
-            {
-                Console.WriteLine($"Found {candidates.Count} homonym candidates matching fiscal code '{opts.MatchCf}':");
-
-                for (var i = 0; i < candidates.Count; i++)
-                {
-                    var c = candidates[i];
-                    var currentBirthText = c.BirthDate is { } bd ? bd.ToString("dd/MM/yyyy") : "n/d";
-                    Console.WriteLine($"  [{i + 1}] {c.LastName} {c.FirstName} — {c.Mail} — born on {currentBirthText}");
-                }
-
-                Console.WriteLine("Use --match-cf <CF> --resolve-index <N> to pick which one to update.");
-
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-            else
-            {
-                var index = opts.ResolveIndex.Value - 1;
-
-                if (index < 0 || index >= candidates.Count)
-                {
-                    Console.WriteLine($"Invalid --resolve-index {opts.ResolveIndex}. Must be between 1 and {candidates.Count}.");
-                    await host.StopAsync(CancellationToken.None);
-                    return 1;
-                }
-
-                selected = candidates[index];
-            }
-
-            selected.FiscalCode = cf;
-            selected.BirthDate = birthDate;
-            employeeRepo.Update(selected);
-
-            Log.Information(
-                "Employee {LastName} {FirstName} updated with fiscal code {FiscalCode} and birth date {BirthDate:yyyy-MM-dd}.",
-                selected.LastName,
-                selected.FirstName,
-                selected.FiscalCode,
-                selected.BirthDate);
-
-            await host.StopAsync(CancellationToken.None);
-            return 0;
-        }
-
-        if (mode == RunMode.Show)
-        {
-            var repo = host.Services.GetRequiredService<ILicenseRepository>();
-            var license = repo.GetByLicenseNumber(opts.UpdateLicenseNumber!);
-
-            if (license is null)
-            {
-                Log.Warning("No license found with number {LicenseNumber}.", opts.UpdateLicenseNumber);
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-
-            Console.WriteLine($"{license.FirstName} {license.LastName} — license n. {license.LicenseNumber}");
-            Console.WriteLine($"Current expiration: {license.ExpiryDate:yyyy-MM-dd}");
-
-            await host.StopAsync(CancellationToken.None);
-            return 0;
-        }
-
-        if (mode == RunMode.Update)
-        {
-            if (!DateTime.TryParseExact(
-                    opts.NewExpiryDate,
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var newExpiryDate))
-            {
-                Console.WriteLine($"Invalid date format: '{opts.NewExpiryDate}'. Usa yyyy-MM-dd.");
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-
-            var repo = host.Services.GetRequiredService<ILicenseRepository>();
-            var license = repo.GetByLicenseNumber(opts.UpdateLicenseNumber!);
-
-            if (license is null)
-            {
-                Log.Warning("No license found with number {LicenseNumber}.", opts.UpdateLicenseNumber);
-                await host.StopAsync(CancellationToken.None);
-                return 1;
-            }
-
-            license.ExpiryDate = newExpiryDate;
-            repo.SaveAll(repo.GetAll());
-
-            Log.Information(
-                "Driving licence {LicenseNumber} updated: new expiration date {ExpiryDate:yyyy-MM-dd}.",
-                opts.UpdateLicenseNumber,
-                newExpiryDate);
-
-            await host.StopAsync(CancellationToken.None);
-            return 0;
-        }
-
-        // Process
-        var emailService = host.Services.GetRequiredService<IEmailService>();
-        var orchestrator = host.Services.GetRequiredService<LicenseOrchestrator>();
-
-        if (!await emailService.VerifyEmailConnectivityAsync(ct))
-        {
-            Log.Warning("SMTP Health Check failed. Licenses will be processed, but notifications might not be delivered.");
-        }
-
-        await orchestrator.ProcessLicensesAsync(ct);
+        var result = await command.ExecuteAsync(opts, ct);
 
         await host.StopAsync(CancellationToken.None);
-        return 0;
+        return result;
     }
 
     private static IHost BuildHost(string[] args, Options opts)
@@ -338,6 +137,14 @@ public class Program
 
         builder.Services.AddTransient<IEmailService, MailKitEmailService>();
         builder.Services.AddTransient<LicenseOrchestrator>();
+
+        builder.Services.AddTransient<SortLicensesCommand>();
+        builder.Services.AddTransient<SearchLicenseByNameCommand>();
+        builder.Services.AddTransient<UpcomingExpirationsCommand>();
+        builder.Services.AddTransient<MatchFiscalCodeCommand>();
+        builder.Services.AddTransient<ShowLicenseCommand>();
+        builder.Services.AddTransient<UpdateLicenseCommand>();
+        builder.Services.AddTransient<ProcessLicensesCommand>();
     }
 
     private static int HandleParseErrors(IEnumerable<Error> errors)
