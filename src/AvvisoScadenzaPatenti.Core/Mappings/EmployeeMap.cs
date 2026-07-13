@@ -15,6 +15,8 @@ public sealed class EmployeeMap : ClassMap<Employee>
             .TypeConverterOption.Format("dd/MM/yyyy")
             .TypeConverterOption.CultureInfo(new CultureInfo("it-IT"))
             .Optional();
+        this.Map(m => m.FiscalCode).Name("CODICE_FISCALE")
+            .Optional();
         this.Map(m => m.Warning2Months).Name("DUE_MESI")
             .Default("N")
             .TypeConverterOption.BooleanValues(true, true, "Y")

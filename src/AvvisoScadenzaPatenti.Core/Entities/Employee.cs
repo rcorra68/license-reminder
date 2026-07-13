@@ -11,6 +11,7 @@ public class Employee
     public bool Warning2Weeks { get; set; } = false;
     public bool Warning1Month { get; set; } = false;
     public bool Warning2Months { get; set; } = false;
+    public string? FiscalCode { get; set; }
 
     /// <summary>
     /// Checks if at least one warning flag is currently set to true.
