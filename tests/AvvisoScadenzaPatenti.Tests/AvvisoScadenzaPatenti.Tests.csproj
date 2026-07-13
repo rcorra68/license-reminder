@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AvvisoScadenzaPatenti.Cli\AvvisoScadenzaPatenti.Cli.csproj" />
     <ProjectReference Include="..\..\src\AvvisoScadenzaPatenti.Core\AvvisoScadenzaPatenti.Core.csproj" />
     <ProjectReference Include="..\..\src\AvvisoScadenzaPatenti.Infrastructure\AvvisoScadenzaPatenti.Infrastructure.csproj" />
   </ItemGroup>
