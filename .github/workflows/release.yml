@@ -77,6 +77,7 @@ jobs:
           esac
 
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Computed version: $NEW_VERSION (bump: ${{ steps.bump.outputs.bump }})"
 
       - name: Build and Test
@@ -92,6 +93,22 @@ jobs:
           BRANCH_NAME="release/${{ steps.version.outputs.version }}"
           git checkout -b $BRANCH_NAME
           git push origin $BRANCH_NAME --force
+
+      - name: Generate CHANGELOG.md
+        if: steps.bump.outputs.bump != 'none'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag v${{ steps.version.outputs.version }}
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): update for v${{ steps.version.outputs.version }}"
+          git push origin "release/${{ steps.version.outputs.version }}"
 
       - name: Create Git Tag
         if: steps.bump.outputs.bump != 'none'

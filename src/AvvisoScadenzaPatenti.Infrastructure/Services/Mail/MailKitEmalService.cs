@@ -269,7 +269,7 @@ public class MailKitEmailService : IEmailService
     /// </summary>
     private void AddBcc(MimeMessage message)
     {
-        foreach (var bcc in _settings.MailBcc ?? Enumerable.Empty<string>())
+        foreach (var bcc in _settings.MailBccAddresses)
         {
             if (MailboxAddress.TryParse(bcc, out var addr))
                 message.Bcc.Add(addr);

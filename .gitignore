@@ -427,3 +427,8 @@ SRLArchivioPatenti.csv
 _site/
 obj/
 api/
+
+# Ignore "appSettings.Development.json"
+appsettings.*.json
+!appsettings.json
+!appsettings.Production.json
