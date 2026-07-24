@@ -27,7 +27,7 @@ public class MailKitEmailServiceTests
                 Host = "localhost",
                 Port = 25
             },
-            MailBcc = ["bcc@test.com"]
+            MailBcc = "bcc@test.com"
         };
         _options = Options.Create(_settings);
     }
