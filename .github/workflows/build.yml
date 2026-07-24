@@ -54,12 +54,19 @@ jobs:
           cd out
           zip -r "../${{ env.ARTIFACT_NAME }}-${{ steps.version.outputs.version }}-linux-x64.zip" .
 
+      - name: Extract release notes from CHANGELOG.md
+        if: steps.version.outputs.version != 'untagged'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header -o RELEASE_NOTES.md
+
       - name: Create GitHub Release
         if: steps.version.outputs.version != 'untagged'
         run: |
           gh release create "${{ steps.version.outputs.version }}" \
             "${{ env.ARTIFACT_NAME }}-${{ steps.version.outputs.version }}-linux-x64.zip" \
             --title "${{ steps.version.outputs.version }}" \
-            --generate-notes
+            --notes-file RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
