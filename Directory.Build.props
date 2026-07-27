@@ -1,14 +1,8 @@
 <Project>
   <PropertyGroup>
-    <!-- ========================= -->
-    <!-- VERSIONING (git-cliff driven) -->
-    <!-- ========================= -->
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <!-- Runtime version info -->
-    <AssemblyInformationalVersion>
-      $(VersionPrefix)+$(GitCommitHash)
-    </AssemblyInformationalVersion>
-    <!-- Nullable + modern .NET defaults -->
+    <!-- ========================================== -->
+    <!-- VERSIONING (Nerdbank.GitVersioning driven) -->
+    <!-- ========================================== -->
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -18,12 +12,4 @@
       <Version>3.10.91</Version>
     </PackageReference>
   </ItemGroup>
-  <!-- ========================= -->
-  <!-- GIT COMMIT HASH -->
-  <!-- ========================= -->
-  <Target Name="GetGitCommitHash" BeforeTargets="GenerateAssemblyInfo">
-    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash" />
-    </Exec>
-  </Target>
 </Project>
