@@ -9,5 +9,6 @@ public enum RunMode
     Show,
     SearchByName,
     UpcomingExpirations,
-    MatchFiscalCode
+    MatchFiscalCode,
+    ShowHelp
 }
