@@ -1,3 +1,18 @@
+# Changelog
+
+All notable changes to this project are documented here.
+Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
+follows [Semantic Versioning](https://semver.org/).
+## [3.8.2] - 2026-07-27
+
+### Bug Fixes
+
+- Propagate VersionPrefix to dotnet publish step
+
+### Miscellaneous Tasks
+
+- Set initial version to 3.8.1 via Nerdbank.GitVersioning
+- Migrate versioning to Nerdbank.GitVersioning and split release/build pipeline
 ## [3.5.0] - 2026-05-05
 
 ### 🚀 Features
