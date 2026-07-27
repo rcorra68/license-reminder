@@ -45,4 +45,8 @@ public class Options
     [Option("resolve-index", Required = false,
         HelpText = "When --match-cf finds multiple homonym candidates, selects which one to update (1-based index from the printed list).")]
     public int? ResolveIndex { get; set; }
+
+    [Option("process", Required = false,
+        HelpText = "Checks deadlines and sends email notifications (normally used by cron).")]
+    public bool Process { get; set; }
 }

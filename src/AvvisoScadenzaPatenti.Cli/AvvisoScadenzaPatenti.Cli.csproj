@@ -6,7 +6,6 @@
     <RootNamespace>AvvisoScadenzaPatenti.Cli</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>2.0.0</Version>
     <UserSecretsId>4a07d40d-004d-49df-8789-69ccc1c0ece5</UserSecretsId>
   </PropertyGroup>
 
