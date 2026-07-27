@@ -2,21 +2,18 @@
 
 using AvvisoScadenzaPatenti.Cli.Commands;
 using AvvisoScadenzaPatenti.Core.Configuration;
-using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Enums;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Services;
-using AvvisoScadenzaPatenti.Core.Shared.FiscalCode;
-using AvvisoScadenzaPatenti.Core.Shared.Sorting;
 using AvvisoScadenzaPatenti.Infrastructure.Repositories;
 using AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 using CommandLine;
+using CommandLine.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 
@@ -47,7 +44,14 @@ public class Program
             hasUpcomingExpirations ? RunMode.UpcomingExpirations :
             hasMatchCf ? RunMode.MatchFiscalCode :
             opts.SortBy is not null ? RunMode.Sort :
-            RunMode.Process;
+            opts.Process ? RunMode.Process :
+            RunMode.ShowHelp;   // nuovo case, invece del fallback silenzioso
+
+        if (mode == RunMode.ShowHelp)
+        {
+            Console.WriteLine(HelpText.AutoBuild(Parser.Default.ParseArguments<Options>(new[] { "--help" })));
+            return 1;
+        }
 
         if (mode == RunMode.Init)
         {
