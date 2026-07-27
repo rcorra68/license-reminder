@@ -94,24 +94,18 @@ jobs:
           git commit -m "chore(release): set version to ${{ steps.version.outputs.version }}"
           git push origin "$BRANCH_NAME" --force
 
-      - name: Generate CHANGELOG.md preview
+      - name: Generate CHANGELOG preview (not committed)
         if: steps.bump.outputs.bump != 'none'
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --tag v${{ steps.version.outputs.version }} --unreleased --prepend CHANGELOG.md
-
-      - name: Commit CHANGELOG.md
-        if: steps.bump.outputs.bump != 'none'
-        run: |
-          git add CHANGELOG.md
-          git commit -m "docs(changelog): preview for v${{ steps.version.outputs.version }}" || echo "Nothing to commit"
-          git push origin "release/${{ steps.version.outputs.version }}"
+          args: --tag v${{ steps.version.outputs.version }} --unreleased --strip header -o CHANGELOG_PREVIEW.md
 
       - name: Create or update PR to main
         if: steps.bump.outputs.bump != 'none'
         run: |
           EXISTING_PR=$(gh pr list --base main --head "release/${{ steps.version.outputs.version }}" --json number --jq '.[0].number')
+          PREVIEW=$(cat CHANGELOG_PREVIEW.md)
 
           if [ -n "$EXISTING_PR" ]; then
             echo "PR #$EXISTING_PR already exists, skipping creation."
@@ -125,7 +119,10 @@ jobs:
           - **Versione prevista:** ${{ steps.version.outputs.version }}
           - **Tipo di bump:** ${{ steps.bump.outputs.bump }}
 
-          Il tag effettivo e la pubblicazione del binario vengono creati automaticamente al merge di questa PR su \`main\`."
+          ### Changelog
+          $PREVIEW
+
+          Il tag effettivo, il CHANGELOG.md definitivo e la pubblicazione del binario vengono creati automaticamente al merge di questa PR su \`main\`."
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

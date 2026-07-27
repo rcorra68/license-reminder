@@ -70,7 +70,21 @@ jobs:
           cd out
           zip -r "../license-reminder-${{ steps.nbgv.outputs.tag }}-linux-x64.zip" .
 
-      - name: Extract release notes from CHANGELOG.md
+      - name: Generate CHANGELOG.md
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag ${{ steps.nbgv.outputs.tag }} -o CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): update for ${{ steps.nbgv.outputs.tag }}" || echo "Nothing to commit"
+          git push origin main
+
+      - name: Extract release notes
         if: steps.check_tag.outputs.exists == 'false'
         uses: orhun/git-cliff-action@v4
         with:
