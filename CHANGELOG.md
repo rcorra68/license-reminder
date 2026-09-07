@@ -3,6 +3,32 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
 follows [Semantic Versioning](https://semver.org/).
+## [3.8.3] - 2026-09-07
+
+### Bug Fixes
+
+- Always include admin in license notice BCC
+
+### Miscellaneous Tasks
+
+- Prevent CHANGELOG.md conflicts by generating it only on main
+- Adopt reusable workflows architecture
+- Retrigger after making reusable-workflows public
+## [3.8.2] - 2026-07-27
+
+### Bug Fixes
+
+- Propagate VersionPrefix to dotnet publish step
+- Prevent --upcoming-expirations from becoming the default run mode
+
+### Documentation
+
+- *(changelog)* Preview for v3.8.2
+
+### Miscellaneous Tasks
+
+- Set initial version to 3.8.1 via Nerdbank.GitVersioning
+- Migrate versioning to Nerdbank.GitVersioning and split release/build pipeline
 ## [3.8.1] - 2026-07-24
 
 ### Bug Fixes
@@ -12,6 +38,7 @@ follows [Semantic Versioning](https://semver.org/).
 ### Documentation
 
 - Document --update-license, --upcoming-expirations, --match-cf and --init CLI parameters
+- *(changelog)* Update for v3.8.1
 
 ### Miscellaneous Tasks
 
@@ -217,4 +244,3 @@ follows [Semantic Versioning](https://semver.org/).
 ### Refactor
 
 - Implement SOLID architecture and modern .NET 8 entry point
-## [1.0.0.0] - 2025-09-12
