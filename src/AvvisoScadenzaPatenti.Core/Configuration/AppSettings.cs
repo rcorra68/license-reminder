@@ -10,6 +10,9 @@ public class AppSettings
     [Required]
     public SmtpSettings Smtp { get; set; } = new();
 
+    [Required]
+    public NotificationSettings Notification { get; set; } = new();
+
     public IReadOnlyList<string> MailBccAddresses =>
         MailBcc.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

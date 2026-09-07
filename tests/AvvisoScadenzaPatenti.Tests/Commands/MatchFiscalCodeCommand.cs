@@ -1,5 +1,6 @@
-﻿namespace AvvisoScadenzaPatenti.Cli.Tests.Commands;
+﻿namespace AvvisoScadenzaPatenti.Tests;
 
+using AvvisoScadenzaPatenti.Cli;
 using AvvisoScadenzaPatenti.Cli.Commands;
 using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Interfaces;
