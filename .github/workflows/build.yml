@@ -1,4 +1,4 @@
-name: Tag, Build & Release
+name: Build and Release
 
 on:
   push:
@@ -7,96 +7,12 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout full history
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configure Git Identity
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Restore local tools
-        run: dotnet tool restore
-
-      - name: Get version from version.json
-        id: nbgv
-        run: |
-          VERSION=$(dotnet tool run nbgv -- get-version -v NuGetPackageVersion)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check if tag already exists
-        id: check_tag
-        run: |
-          if git rev-parse "${{ steps.nbgv.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create and push tag
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          git tag -a "${{ steps.nbgv.outputs.tag }}" -m "Release ${{ steps.nbgv.outputs.tag }}"
-          git push origin "${{ steps.nbgv.outputs.tag }}"
-
-      - name: Publish
-        if: steps.check_tag.outputs.exists == 'false'
-        env:
-          PROJECT_PATH: src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj
-        run: |
-          dotnet publish "$PROJECT_PATH" \
-            -c Release \
-            -r linux-x64 \
-            --self-contained true \
-            -o out \
-            /p:PublishSingleFile=true
-
-      - name: Package for release
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          cd out
-          zip -r "../license-reminder-${{ steps.nbgv.outputs.tag }}-linux-x64.zip" .
-
-      - name: Generate CHANGELOG.md
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --tag ${{ steps.nbgv.outputs.tag }} -o CHANGELOG.md
-
-      - name: Commit CHANGELOG.md
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          git add CHANGELOG.md
-          git commit -m "docs(changelog): update for ${{ steps.nbgv.outputs.tag }}" || echo "Nothing to commit"
-          git push origin main
-
-      - name: Extract release notes
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --latest --strip header -o RELEASE_NOTES.md
-
-      - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          gh release create "${{ steps.nbgv.outputs.tag }}" \
-            "license-reminder-${{ steps.nbgv.outputs.tag }}-linux-x64.zip" \
-            --title "${{ steps.nbgv.outputs.tag }}" \
-            --notes-file RELEASE_NOTES.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: rcorra68/reusable-workflows/.github/workflows/publish-dotnet-cli.yml@main
+    with:
+      project_path: src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj
+      runtimes: '["linux-x64", "win-x64"]'
+      artifact_name: license-reminder

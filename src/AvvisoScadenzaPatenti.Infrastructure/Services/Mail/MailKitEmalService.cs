@@ -269,10 +269,17 @@ public class MailKitEmailService : IEmailService
     /// </summary>
     private void AddBcc(MimeMessage message)
     {
-        foreach (var bcc in _settings.MailBccAddresses)
+        var bccAddresses = (_settings.MailBccAddresses ?? [])
+            .Concat([_settings.AdminEmail])
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var bcc in bccAddresses)
         {
             if (MailboxAddress.TryParse(bcc, out var addr))
                 message.Bcc.Add(addr);
+            else
+                _logger.LogWarning("Invalid BCC address, ignored: {Bcc}", bcc);
         }
     }
 
