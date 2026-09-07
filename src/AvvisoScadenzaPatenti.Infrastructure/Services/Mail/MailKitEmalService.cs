@@ -1,18 +1,13 @@
 ﻿namespace AvvisoScadenzaPatenti.Infrastructure.Services.Mail;
 
-using System.Text;
-
 using AvvisoScadenzaPatenti.Core.Configuration;
 using AvvisoScadenzaPatenti.Core.Entities;
 using AvvisoScadenzaPatenti.Core.Interfaces;
 using AvvisoScadenzaPatenti.Core.Models;
-
 using MailKit.Net.Smtp;
 using MailKit.Security;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using MimeKit;
 
 /// <summary>
@@ -189,7 +184,7 @@ public class MailKitEmailService : IEmailService
     /// <summary>
     /// Creates an HTML email message for license expiration/expired notifications.
     /// </summary>
-    private MimeMessage CreateLicenseMessage(Employee employee, License license, bool isExpired)
+    internal MimeMessage CreateLicenseMessage(Employee employee, License license, bool isExpired)
     {
         var message = new MimeMessage();
 
@@ -211,7 +206,7 @@ public class MailKitEmailService : IEmailService
             HtmlBody = $@"
                 <p>Ciao {employee.FirstName} {employee.LastName},</p>
                 <p>{body}</p>
-                <p>Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi all'IIE ROBERTO CORRADETTI cosa fare per il rinnovo.</p>
+                <p>Se hai già provveduto al rinnovo, ignora la presente mail. Altrimenti chiedi a {_settings.Notification.ContactRole} {_settings.Notification.ContactName} cosa fare per il rinnovo.</p>
                 <p><small>*** La presente mail è generata automaticamente dal sistema. Per qualsiasi comunicazione, si prega di non rispondere a questa mail, ma di contattare l'help desk tecnico ***.</small></p>"
         }.ToMessageBody();
 
