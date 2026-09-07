@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
 follows [Semantic Versioning](https://semver.org/).
+## [3.9.0] - 2026-09-07
+
+### Documentation
+
+- *(changelog)* Update for v3.8.3
+
+### Features
+
+- Parameterize notification contact in license emails
 ## [3.8.3] - 2026-09-07
 
 ### Bug Fixes
