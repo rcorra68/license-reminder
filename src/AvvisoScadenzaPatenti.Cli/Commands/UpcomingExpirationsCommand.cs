@@ -29,8 +29,9 @@ public class UpcomingExpirationsCommand : ILicenseCommand
 
         foreach (var license in upcoming)
         {
-            var expiredMarker = license.ExpiryDate < DateTime.Today ? "[EXPIRED] " : string.Empty;
-            Console.WriteLine($"{expiredMarker}{license.LastName} {license.FirstName} — expire date: {license.ExpiryDate:yyyy-MM-dd}");
+            var daysLeft = (license.ExpiryDate.Date - DateTime.Today).Days;
+            var expiredMarker = daysLeft < 0 ? "[EXPIRED] " : string.Empty;
+            Console.WriteLine($"{expiredMarker}{license.LastName} {license.FirstName} — expire date: {license.ExpiryDate:yyyy-MM-dd} - days left: {daysLeft}");
         }
 
         return Task.FromResult(0);
