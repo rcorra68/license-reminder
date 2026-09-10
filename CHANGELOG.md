@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
 follows [Semantic Versioning](https://semver.org/).
+## [3.10.0] - 2026-09-10
+
+### Documentation
+
+- *(changelog)* Update for v3.9.0
+
+### Features
+
+- Show days left to expiration in upcoming-expirations output
 ## [3.9.0] - 2026-09-07
 
 ### Documentation
