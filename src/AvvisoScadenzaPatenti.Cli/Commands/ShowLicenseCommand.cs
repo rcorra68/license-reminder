@@ -25,6 +25,11 @@ public class ShowLicenseCommand : ILicenseCommand
         Console.WriteLine($"{license.FirstName} {license.LastName} — license n. {license.LicenseNumber}");
         Console.WriteLine($"Current expiration: {license.ExpiryDate:yyyy-MM-dd}");
 
+        if (license.IsDestroyed())
+        {
+            Console.WriteLine("Status: DESTROYED — excluded from expiration handling.");
+        }
+
         return Task.FromResult(0);
     }
 }
