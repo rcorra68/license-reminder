@@ -64,6 +64,15 @@ public class LicenseOrchestrator
         foreach (var license in licenses)
         {
             ct.ThrowIfCancellationRequested();
+
+            // Destroyed licenses (e.g. retired personnel) are out of scope:
+            // skip them before resolving the employee, so no record gets auto-created.
+            if (license.IsDestroyed())
+            {
+                _logger.LogDebug("Skipping destroyed license {LicenseNumber}", license.LicenseNumber);
+                continue;
+            }
+
             processed++;
 
             var employee = this.GetOrCreateEmployee(license.FirstName, license.LastName);

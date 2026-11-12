@@ -2,6 +2,8 @@
 
 using System;
 
+using AvvisoScadenzaPatenti.Core.Shared;
+
 public class License
 {
     public string Office { get; set; } = null!;
@@ -14,4 +16,11 @@ public class License
     public DateTime? ReleaseDate { get; set; }
     public DateTime ExpiryDate { get; set; }
     public string Status { get; set; } = null!;
+
+    /// <summary>
+    /// True when the license has been marked as destroyed (STATO = DISTRUTTA).
+    /// Destroyed licenses are no longer subject to expiration handling.
+    /// </summary>
+    public bool IsDestroyed() =>
+        string.Equals(Status?.Trim(), LicenseStatus.Destroyed, StringComparison.OrdinalIgnoreCase);
 }

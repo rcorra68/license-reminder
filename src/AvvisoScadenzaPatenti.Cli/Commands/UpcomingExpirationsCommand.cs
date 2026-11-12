@@ -15,7 +15,7 @@ public class UpcomingExpirationsCommand : ILicenseCommand
 
     public Task<int> ExecuteAsync(Options opts, CancellationToken ct)
     {
-        var licenses = _licenseRepo.GetAll();
+        var licenses = _licenseRepo.GetAll().Where(l => !l.IsDestroyed());
 
         var count = opts.UpcomingExpirations!.FirstOrDefault();
         if (count <= 0)
