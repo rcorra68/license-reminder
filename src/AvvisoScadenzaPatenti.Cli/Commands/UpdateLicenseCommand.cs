@@ -34,6 +34,14 @@ public class UpdateLicenseCommand : ILicenseCommand
             return Task.FromResult(1);
         }
 
+        if (license.IsDestroyed())
+        {
+            Log.Warning(
+                "Driving licence {LicenseNumber} is marked as destroyed: expiry date not updated.",
+                opts.UpdateLicenseNumber);
+            return Task.FromResult(1);
+        }
+
         license.ExpiryDate = newExpiryDate;
         _licenseRepo.SaveAll(_licenseRepo.GetAll());
 

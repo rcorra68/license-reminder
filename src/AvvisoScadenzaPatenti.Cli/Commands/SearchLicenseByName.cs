@@ -30,7 +30,8 @@ public class SearchLicenseByNameCommand : ILicenseCommand
             var birthDateText = employee?.BirthDate is { } bd ? bd.ToString("dd/MM/yyyy") : "n/d";
 
             Console.WriteLine($"{license.FirstName} {license.LastName} — born on {birthDateText}");
-            Console.WriteLine($"  License No. {license.LicenseNumber} — Current expiration date: {license.ExpiryDate:yyyy-MM-dd}");
+            var destroyedMarker = license.IsDestroyed() ? " [DESTROYED]" : string.Empty;
+            Console.WriteLine($"  License No. {license.LicenseNumber} — Current expiration date: {license.ExpiryDate:yyyy-MM-dd}{destroyedMarker}");
             Console.WriteLine();
         }
 

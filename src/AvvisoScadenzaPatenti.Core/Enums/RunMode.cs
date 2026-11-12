@@ -6,6 +6,7 @@ public enum RunMode
     Sort,
     Init,
     Update,
+    Destroy,
     Show,
     SearchByName,
     UpcomingExpirations,

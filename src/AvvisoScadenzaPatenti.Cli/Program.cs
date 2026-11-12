@@ -30,6 +30,7 @@ public class Program
 
     private static async Task<int> WithParsedAsync(Options opts, string[] args)
     {
+        var hasDestroyTarget = !string.IsNullOrWhiteSpace(opts.DestroyLicenseNumber);
         var hasUpdateTarget = opts.UpdateLicenseNumber is not null;
         var hasNewExpiryDate = !string.IsNullOrWhiteSpace(opts.NewExpiryDate);
         var hasNameSearch = !string.IsNullOrWhiteSpace(opts.Name);
@@ -38,6 +39,7 @@ public class Program
 
         var mode =
             opts.Init ? RunMode.Init :
+            hasDestroyTarget ? RunMode.Destroy :
             hasUpdateTarget && hasNewExpiryDate ? RunMode.Update :
             hasUpdateTarget ? RunMode.Show :
             hasNameSearch ? RunMode.SearchByName :
@@ -85,6 +87,7 @@ public class Program
             RunMode.MatchFiscalCode => host.Services.GetRequiredService<MatchFiscalCodeCommand>(),
             RunMode.Show => host.Services.GetRequiredService<ShowLicenseCommand>(),
             RunMode.Update => host.Services.GetRequiredService<UpdateLicenseCommand>(),
+            RunMode.Destroy => host.Services.GetRequiredService<DestroyLicenseCommand>(),
             RunMode.Process => host.Services.GetRequiredService<ProcessLicensesCommand>(),
             _ => throw new InvalidOperationException($"Unhandled run mode: {mode}")
         };
@@ -148,6 +151,7 @@ public class Program
         builder.Services.AddTransient<MatchFiscalCodeCommand>();
         builder.Services.AddTransient<ShowLicenseCommand>();
         builder.Services.AddTransient<UpdateLicenseCommand>();
+        builder.Services.AddTransient<DestroyLicenseCommand>();
         builder.Services.AddTransient<ProcessLicensesCommand>();
     }
 
