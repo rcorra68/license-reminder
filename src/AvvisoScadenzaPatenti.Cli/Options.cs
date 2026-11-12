@@ -31,7 +31,7 @@ public class Options
     public string? NewExpiryDate { get; set; }
 
     [Option("destroy", Required = false,
-        HelpText = "Driving licence number to mark as destroyed (STATO = DISTRUTTA). Destroyed licenses are excluded from expiration handling.")]
+        HelpText = "Driving licence number to mark as destroyed (STATO = PATENTE DISTRUTTA). Destroyed licenses are excluded from expiration handling.")]
     public string? DestroyLicenseNumber { get; set; }
 
     [Option("name", Required = false,

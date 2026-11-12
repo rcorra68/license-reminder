@@ -18,9 +18,8 @@ public class License
     public string Status { get; set; } = null!;
 
     /// <summary>
-    /// True when the license has been marked as destroyed (STATO = DISTRUTTA).
+    /// True when the license has been marked as destroyed (STATO = PATENTE DISTRUTTA).
     /// Destroyed licenses are no longer subject to expiration handling.
     /// </summary>
-    public bool IsDestroyed() =>
-        string.Equals(Status?.Trim(), LicenseStatus.Destroyed, StringComparison.OrdinalIgnoreCase);
+    public bool IsDestroyed() => LicenseStatus.IsDestroyed(Status);
 }
