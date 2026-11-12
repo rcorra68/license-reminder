@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
 follows [Semantic Versioning](https://semver.org/).
+## [3.11.0] - 2026-11-12
+
+### Documentation
+
+- *(changelog)* Update for v3.10.0
+
+### Features
+
+- Add --destroy option to mark licenses as destroyed
 ## [3.10.0] - 2026-09-10
 
 ### Documentation
