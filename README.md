@@ -32,7 +32,7 @@ The project follows **Clean Architecture** principles and **SOLID** patterns, or
 - **Fuzzy Name Search**: Token-based search for licenses by employee name, tolerant of word order and partial matches.
 - **Fiscal Code Matching**: Decodes an Italian *Codice Fiscale* and matches it against employee records, with homonym resolution when multiple candidates are found.
 - **Upcoming Expirations Report**: Lists the next N licenses due to expire, flagging any already past due.
-- **Destroyed Licenses**: Marks a license as destroyed (`STATO = DISTRUTTA`, e.g. for retired personnel), excluding it from notifications and expiration reports.
+- **Destroyed Licenses**: Marks a license as destroyed (`STATO = PATENTE DISTRUTTA`, e.g. for retired personnel), excluding it from notifications and expiration reports.
 
 ## 🗂️ Data Sources
 
@@ -132,7 +132,7 @@ dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csp
 
 ### 🗑️ Mark a license as destroyed
 
-Sets the license status (`STATO`) to `DISTRUTTA`, e.g. when the holder retires and the license is physically destroyed. The record stays in `licenses.csv`, but it is skipped by `--process` (no notifications) and by `--upcoming-expirations`; `--update-license` and `--name` still show it, flagged as destroyed. Running the command again on an already destroyed license does nothing.
+Sets the license status (`STATO`) to `PATENTE DISTRUTTA` (the older `DISTRUTTA` value is still recognized), e.g. when the holder retires and the license is physically destroyed. The record stays in `licenses.csv`, but it is skipped by `--process` (no notifications) and by `--upcoming-expirations`; `--update-license` and `--name` still show it, flagged as destroyed. Running the command again on an already destroyed license does nothing.
 
 ```bash
 dotnet run --project src/AvvisoScadenzaPatenti.Cli/AvvisoScadenzaPatenti.Cli.csproj -- --destroy <number>
