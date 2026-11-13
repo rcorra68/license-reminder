@@ -5,7 +5,7 @@ using AvvisoScadenzaPatenti.Core.Shared;
 using Serilog;
 
 /// <summary>
-/// Marks a driving licence as destroyed (STATO = DISTRUTTA), e.g. when the holder retires.
+/// Marks a driving licence as destroyed (STATO = PATENTE DISTRUTTA), e.g. when the holder retires.
 /// The record is kept in licenses.csv for traceability but is excluded from expiration handling.
 /// </summary>
 public class DestroyLicenseCommand : ILicenseCommand

@@ -59,7 +59,7 @@ public class DestroyLicenseCommandTests
     [Fact]
     public async Task ExecuteAsync_WithAlreadyDestroyedLicense_ReturnsSuccess_AndDoesNotSave()
     {
-        var license = CreateLicense("27815", "distrutta");
+        var license = CreateLicense("27815", "patente distrutta");
         _licenseRepoMock.Setup(r => r.GetByLicenseNumber("27815")).Returns(license);
         var opts = new Options { DestroyLicenseNumber = "27815" };
 
@@ -67,5 +67,17 @@ public class DestroyLicenseCommandTests
 
         Assert.Equal(0, result);
         _licenseRepoMock.Verify(r => r.SaveAll(It.IsAny<IEnumerable<License>>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("PATENTE DISTRUTTA", true)]
+    [InlineData(" patente distrutta ", true)]
+    [InlineData("DISTRUTTA", true)]
+    [InlineData("PATENTE EMESSA", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsDestroyed_RecognizesCurrentAndLegacyLabels(string? status, bool expected)
+    {
+        Assert.Equal(expected, LicenseStatus.IsDestroyed(status));
     }
 }
