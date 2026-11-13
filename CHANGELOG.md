@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
 follows [Semantic Versioning](https://semver.org/).
+## [3.11.1] - 2026-11-13
+
+### Bug Fixes
+
+- Recognize "PATENTE DISTRUTTA" as destroyed license status
+
+### Documentation
+
+- *(changelog)* Update for v3.11.0
 ## [3.11.0] - 2026-11-12
 
 ### Documentation
