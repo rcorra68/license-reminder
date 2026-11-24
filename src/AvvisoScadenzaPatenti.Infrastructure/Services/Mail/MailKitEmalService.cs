@@ -191,7 +191,7 @@ public class MailKitEmailService : IEmailService
         message.From.Add(new MailboxAddress("Procedura Patenti WEB", "noreply@vigilfuoco.it"));
         message.To.Add(new MailboxAddress($"{employee.FirstName} {employee.LastName}", employee.Mail));
 
-        this.AddBcc(message);
+        this.AddBcc(message, isExpired);
 
         message.Subject = isExpired
             ? $"⚠ Patente SCADUTA - {employee.LastName} {employee.FirstName}"
@@ -260,12 +260,17 @@ public class MailKitEmailService : IEmailService
     }
 
     /// <summary>
-    /// Adds configured BCC addresses to the email message if any are defined.
+    /// Adds BCC recipients to the email message.
+    /// Expired licenses notify only the administrator; upcoming expirations
+    /// also notify the configured BCC addresses.
     /// </summary>
-    private void AddBcc(MimeMessage message)
+    private void AddBcc(MimeMessage message, bool isExpired)
     {
-        var bccAddresses = (_settings.MailBccAddresses ?? [])
-            .Concat([_settings.AdminEmail])
+        IEnumerable<string?> candidates = isExpired
+            ? [_settings.AdminEmail]
+            : [.. _settings.MailBccAddresses ?? [], _settings.AdminEmail];
+
+        var bccAddresses = candidates
             .Where(a => !string.IsNullOrWhiteSpace(a))
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
