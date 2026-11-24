@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/), versioning
 follows [Semantic Versioning](https://semver.org/).
+## [3.12.0] - 2026-11-24
+
+### Documentation
+
+- *(changelog)* Update for v3.11.1
+
+### Features
+
+- *(mail)* Send BCC only to admin for expired licenses
 ## [3.11.1] - 2026-11-13
 
 ### Bug Fixes
