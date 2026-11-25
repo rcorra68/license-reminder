@@ -12,4 +12,10 @@
       <Version>3.10.91</Version>
     </PackageReference>
   </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Embed debug symbols in the DLL: no .pdb files, line numbers kept in stack traces -->
+    <DebugType>embedded</DebugType>
+    <!-- Do not copy XML documentation files to the publish output -->
+    <PublishDocumentationFiles>false</PublishDocumentationFiles>
+  </PropertyGroup>
 </Project>
